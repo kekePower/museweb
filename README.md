@@ -12,7 +12,7 @@ MuseWeb is an **experimental, prompt-driven web server** that streams HTML strai
   * **[Ollama](https://ollama.ai/)** (default, runs everything locally), or
   * Any **OpenAI-compatible** API (e.g. OpenAI, Together.ai, Groq, etc.).
 * **Single Binary** – Go-powered, ~7 MB static binary, no external runtime.
-* **Zero JS by Default** – Only the streamed HTML from the model is served; you can add your own assets in `static/`.
+* **Zero JS by Default** – Only the streamed HTML from the model is served; you can add your own assets in `public/`.
 * **Configurable via `config.yaml`** – Port, model, backend, prompt directory, and OpenAI credentials.
 
 ---
@@ -21,9 +21,9 @@ MuseWeb is an **experimental, prompt-driven web server** that streams HTML strai
 
 ```bash
 # 1. Clone and build
-$ git clone https://github.com/yourname/museweb.git
+$ git clone https://github.com/kekePower/museweb.git
 $ cd museweb
-$ go build -o museweb
+$ GO111MODULE=on go build .
 
 # 2. (Optional) pull an LLM with Ollama
 $ ollama pull llama3
