@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/ollama/ollama/api"
@@ -20,6 +21,7 @@ import (
 // --- Configuration Structures ---
 type Config struct {
 	Server struct {
+		Address    string `yaml:"address"`
 		Port       string `yaml:"port"`
 		PromptsDir string `yaml:"prompts_dir"`
 	} `yaml:"server"`
@@ -33,9 +35,19 @@ type Config struct {
 	} `yaml:"openai"`
 }
 
-const version = "1.0.0"
+const version = "1.0.1"
 
 var systemPrompt string
+
+// codeFenceRE removes markdown code fences like ```html and ```
+var codeFenceRE = regexp.MustCompile("```[a-zA-Z]*\\n?|```")
+
+// sanitizeResponse strips markdown code fences and inline backticks from model output.
+func sanitizeResponse(s string) string {
+	cleaned := codeFenceRE.ReplaceAllString(s, "")
+	cleaned = strings.ReplaceAll(cleaned, "`", "")
+	return cleaned
+}
 
 func main() {
 	// --- Load Configuration ---
@@ -46,6 +58,7 @@ func main() {
 
 	// --- Define Command-Line Flags ---
 	showVersion := flag.Bool("version", false, "Display the version and exit")
+	host := flag.String("host", cfg.Server.Address, "Interface to bind to (e.g., 127.0.0.1 or 0.0.0.0)")
 	port := flag.String("port", cfg.Server.Port, "Port to run the web server on")
 	model := flag.String("model", cfg.Model.Name, "The model to use (for either backend)")
 	promptsDir := flag.String("prompts", cfg.Server.PromptsDir, "Directory containing the prompt files")
@@ -89,9 +102,9 @@ func main() {
 
 	http.HandleFunc("/", handleRequest(*backend, *model, *promptsDir, *apiKey, *apiBase))
 
-	log.Printf("✨ MuseWeb v%s is live at http://localhost:%s", version, *port)
+	log.Printf("✨ MuseWeb v%s is live at http://%s:%s", version, *host, *port)
 	log.Printf("   (Using backend '%s', model '%s', and prompts from '%s')", *backend, *model, *promptsDir)
-	err = http.ListenAndServe(":"+*port, nil)
+	err = http.ListenAndServe(*host+":"+*port, nil)
 	if err != nil {
 		log.Fatalf("❌ Failed to start server: %v", err)
 	}
@@ -102,9 +115,10 @@ func loadConfig(path string) (*Config, error) {
 	cfg := &Config{
 		// Set default values
 		Server: struct {
+			Address    string `yaml:"address"`
 			Port       string `yaml:"port"`
 			PromptsDir string `yaml:"prompts_dir"`
-		}{"8080", "./prompts"},
+		}{"0.0.0.0", "8080", "./prompts"},
 		Model: struct {
 			Backend string `yaml:"backend"`
 			Name    string `yaml:"name"`
@@ -198,7 +212,7 @@ func streamOllamaResponse(w io.Writer, flusher http.Flusher, modelName, userProm
 	}
 
 	return client.Chat(context.Background(), req, func(res api.ChatResponse) error {
-		_, writeErr := io.WriteString(w, res.Message.Content)
+		_, writeErr := io.WriteString(w, sanitizeResponse(res.Message.Content))
 		if writeErr != nil {
 			log.Printf("🔶 Client disconnected. Aborting stream.")
 			return writeErr
@@ -241,7 +255,7 @@ func streamOpenAIResponse(w io.Writer, flusher http.Flusher, modelName, userProm
 			return err
 		}
 
-		_, writeErr := io.WriteString(w, response.Choices[0].Delta.Content)
+		_, writeErr := io.WriteString(w, sanitizeResponse(response.Choices[0].Delta.Content))
 		if writeErr != nil {
 			log.Printf("🔶 Client disconnected. Aborting stream.")
 			return writeErr
