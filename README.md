@@ -78,4 +78,4 @@ Bug reports and feature ideas are very welcome! 🙏
 
 ## 📜 License
 
-MuseWeb is distributed under the terms of the MIT license. See `LICENSE` for details.
+MuseWeb is distributed under the terms of the Apache License, Version 2.0. See the `LICENSE` file for full details.
