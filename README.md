@@ -62,6 +62,7 @@ Configuration can be overridden with CLI flags, e.g. `./museweb -port 9000 -mode
 * The filename (without extension) becomes the route: `about.txt → /?prompt=about`.
 * **`system_prompt.txt` is the only file that *must* exist.** Define your site’s core rules and even entire pages inside this file if you want.
 * The special file `system_prompt.txt` is prepended to every request.
+* The prompt files included in this repo are **examples only**—update or replace them to suit your own site.
 * HTML, Markdown, or plain prose inside the prompt will be passed verbatim to the model – **sanitize accordingly before publishing**.
 
 ---
