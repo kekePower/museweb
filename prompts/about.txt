@@ -1,0 +1,6 @@
+Generate an "About" page for this technology blog. The page must be structured to tell a story. Use the following information:
+1.  Start with the blog's purpose: it's for people into Linux, AI, and self-hosting, not Big Tech's way.
+2.  Detail what readers will find: hands-on guides, scripts, honest thoughts, and real benchmarks.
+3.  Introduce the authors: a collective of open-source enthusiasts and Linux power users.
+4.  Share a brief origin story of the site's mission: empowering people to control their tech and data.
+5.  Conclude by noting that the site is self-hosted and entirely driven by plain-text prompts, reinforcing the self-hosting ethos.

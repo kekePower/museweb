@@ -1,0 +1,11 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="none">
+    <title>Terranexa Favicon</title>
+    <style>
+        .leaf { fill: #228B22; } /* ForestGreen */
+        .circuit { stroke: #00BFFF; stroke-width: 2.5; } /* DeepSkyBlue */
+    </style>
+    <!-- Leaf Shape -->
+    <path class="leaf" d="M32 2 C16 12 10 32 32 62 C54 32 48 12 32 2 Z"/>
+    <!-- Circuit Path -->
+    <path class="circuit" d="M32,60 V50 H22 V40 H42 V30 H28 V20 H36 V10"/>
+</svg>

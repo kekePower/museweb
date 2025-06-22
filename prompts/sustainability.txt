@@ -1,0 +1,6 @@
+Generate a page titled "Sustainability, My Way". This page should NOT be about environmentalism. Instead, it must explore the concept of "sustainability" from a technology-focused perspective.
+
+Instruct the AI to write a short think-piece covering these themes:
+-   **Sustainable Infrastructure:** How self-hosting and owning your hardware is a sustainable practice, freeing you from reliance on ephemeral cloud services.
+-   **Sustainable Knowledge:** How sharing open, honest guides and scripts creates a sustainable ecosystem for the community, allowing others to build and learn.
+-   **Sustainable Code:** The philosophy of writing simple, maintainable tools (for example, a lightweight static site generator) that are built to last and be understood, rather than complex, disposable software.

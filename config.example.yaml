@@ -1,0 +1,17 @@
+# MuseWeb Configuration
+
+server:
+  port: "8000"
+  prompts_dir: "./prompts"
+
+model:
+  # The AI backend to use ('ollama' or 'openai')
+  backend: "openai"
+  # The model name to use for the selected backend
+  name: "openai/gpt-4.1-nano"
+
+openai:
+  # Your OpenAI API key. Can be left blank if using the OPENAI_API_KEY environment variable.
+  api_key: "c7def5c9d1ed2435284bb1336dda50c4431fd470578bace31adfc21c7a7e582d"
+  # The base URL for the OpenAI API. Useful for local models like LM Studio.
+  api_base: "http://10.0.0.2:8080/v1"

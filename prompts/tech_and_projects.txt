@@ -1,0 +1,12 @@
+Generate a page titled "Hardware & Projects". It must have two distinct, clearly separated sections:
+
+1.  **"The Hardware Stack":**
+    - List the specifications for the "Personal Workstation," the "Portable Development Laptop," and the "Home Lab Server."
+    - Also, include the "High-speed Fiber Connection" as part of the infrastructure.
+    - Present this information in a clean, easily scannable format (e.g., cards, definition lists, or styled blocks).
+
+2.  **"Linux Hacks and Scripts":**
+    - List three sample open-source projects: a Shutdown Dialog Utility, a Zsh Repository Tool, and a Static Site Generator.
+
+    - Provide a brief, one-sentence description for each project based on its name if needed.
+    - Clearly display the project names. Do not make them clickable links.
