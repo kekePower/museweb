@@ -35,17 +35,37 @@ type Config struct {
 	} `yaml:"openai"`
 }
 
-const version = "1.0.1"
+const version = "1.0.2d"
 
 var systemPrompt string
 
 // codeFenceRE removes markdown code fences like ```html and ```
 var codeFenceRE = regexp.MustCompile("```[a-zA-Z]*\\n?|```")
 
-// sanitizeResponse strips markdown code fences and inline backticks from model output.
+// sanitizeResponse cleans up model output by removing markdown code fences, inline backticks, and empty think tags.
 func sanitizeResponse(s string) string {
+	// First remove markdown code fences
 	cleaned := codeFenceRE.ReplaceAllString(s, "")
+	// Remove inline backticks
 	cleaned = strings.ReplaceAll(cleaned, "`", "")
+
+	// Remove empty think tags with any amount of whitespace and newlines
+	// This handles cases like:
+	// <think>
+	// </think>
+	// or <think></think>
+	// or <think>
+	// </think>
+	cleaned = regexp.MustCompile(`(?i)(?:\s*<think>(?:\s|\n)*</think>\s*)+`).ReplaceAllString(cleaned, "")
+
+	// Also remove any remaining standalone think tags that might have been split across chunks
+	cleaned = regexp.MustCompile(`(?i)(?:\s*<think>(?:\s|\n)*$)`).ReplaceAllString(cleaned, "")
+	cleaned = regexp.MustCompile(`(?i)(?:^(?:\s|\n)*</think>\s*)`).ReplaceAllString(cleaned, "")
+
+	// Remove 'html' text at the start of the response when it appears before HTML content
+	// This handles cases where the model tries to use Markdown code blocks but doesn't format them correctly
+	cleaned = regexp.MustCompile(`^(?i)\s*html\s*\n\s*<(!DOCTYPE|html)`).ReplaceAllString(cleaned, `$1`)
+
 	return cleaned
 }
 
