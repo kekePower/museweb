@@ -35,9 +35,7 @@ type Config struct {
 	} `yaml:"openai"`
 }
 
-const version = "1.0.3"
-
-var systemPrompt string
+const version = "1.0.4"
 
 // codeFenceRE removes markdown code fences like ```html and ```
 var codeFenceRE = regexp.MustCompile("```[a-zA-Z]*\\n?|```")
@@ -103,15 +101,6 @@ func main() {
 		log.Fatalf("❌ For the 'openai' backend, the API key must be provided via the -api-key flag, the config.yaml file, or the OPENAI_API_KEY environment variable.")
 	}
 
-	// --- Load the System Prompt at Startup ---
-	systemPromptPath := filepath.Join(*promptsDir, "system_prompt.txt")
-	promptBytes, err := os.ReadFile(systemPromptPath)
-	if err != nil {
-		log.Fatalf("❌ Failed to read system prompt file at %s: %v", systemPromptPath, err)
-	}
-	systemPrompt = string(promptBytes)
-	log.Println("✅ System prompt loaded successfully.")
-
 	// --- Setup HTTP Server ---
 	appHandler := http.HandlerFunc(handleRequest(*backend, *model, *promptsDir, *apiKey, *apiBase))
 	fs := http.FileServer(http.Dir("public"))
@@ -124,9 +113,18 @@ func main() {
 		appHandler.ServeHTTP(w, r)
 	})
 
-	log.Printf("✨ MuseWeb v%s is live at http://%s:%s", version, *host, *port)
+	displayHost := *host
+	if *host == "0.0.0.0" {
+		displayHost = "localhost"
+	}
+	log.Printf("✨ MuseWeb v%s is live at http://%s:%s", version, displayHost, *port)
 	log.Printf("   (Using backend '%s', model '%s', and prompts from '%s')", *backend, *model, *promptsDir)
-	err = http.ListenAndServe(*host+":"+*port, nil)
+
+	listenAddr := *host
+	if listenAddr == "0.0.0.0" {
+		listenAddr = ""
+	}
+	err = http.ListenAndServe(listenAddr+":"+*port, nil)
 	if err != nil {
 		log.Fatalf("❌ Failed to start server: %v", err)
 	}
@@ -168,6 +166,16 @@ func loadConfig(path string) (*Config, error) {
 func handleRequest(backend, modelName, promptsDir, apiKey, apiBase string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		// --- Load System Prompt ---
+		systemPromptPath := filepath.Join(promptsDir, "system_prompt.txt")
+		systemPromptBytes, err := os.ReadFile(systemPromptPath)
+		if err != nil {
+			log.Printf("❌ Failed to read system prompt file at %s: %v", systemPromptPath, err)
+			http.Error(w, "Could not load system prompt", http.StatusInternalServerError)
+			return
+		}
+		systemPrompt := string(systemPromptBytes)
+
 		// --- Determine which User Prompt to Load ---
 		promptName := r.URL.Query().Get("prompt")
 		if promptName == "" {
@@ -196,9 +204,9 @@ func handleRequest(backend, modelName, promptsDir, apiKey, apiBase string) http.
 
 		// --- Call the selected AI Backend and Stream the Response ---
 		if backend == "openai" {
-			err = streamOpenAIResponse(w, flusher, modelName, userPrompt, apiKey, apiBase)
+			err = streamOpenAIResponse(w, flusher, modelName, systemPrompt, userPrompt, apiKey, apiBase)
 		} else {
-			err = streamOllamaResponse(w, flusher, modelName, userPrompt)
+			err = streamOllamaResponse(w, flusher, modelName, systemPrompt, userPrompt)
 		}
 
 		if err != nil {
@@ -210,7 +218,7 @@ func handleRequest(backend, modelName, promptsDir, apiKey, apiBase string) http.
 	}
 }
 
-func streamOllamaResponse(w io.Writer, flusher http.Flusher, modelName, userPrompt string) error {
+func streamOllamaResponse(w io.Writer, flusher http.Flusher, modelName, systemPrompt, userPrompt string) error {
 	client, err := api.ClientFromEnvironment()
 	if err != nil {
 		http.Error(w.(http.ResponseWriter), "Failed to create Ollama client", http.StatusInternalServerError)
@@ -237,7 +245,7 @@ func streamOllamaResponse(w io.Writer, flusher http.Flusher, modelName, userProm
 	})
 }
 
-func streamOpenAIResponse(w io.Writer, flusher http.Flusher, modelName, userPrompt, apiKey, apiBase string) error {
+func streamOpenAIResponse(w io.Writer, flusher http.Flusher, modelName, systemPrompt, userPrompt, apiKey, apiBase string) error {
 	config := openai.DefaultConfig(apiKey)
 	if apiBase != "" {
 		config.BaseURL = apiBase

@@ -7,6 +7,7 @@ MuseWeb is an **experimental, prompt-driven web server** that streams HTML strai
 ## ✨ Features
 
 * **Prompt → Page** – Point MuseWeb to a folder of `.txt` prompts; each prompt becomes a routable page.
+* **Live Reloading for Prompts** – Edit your prompt files and see changes instantly without restarting the server.
 * **Streaming Responses** – HTML is streamed token-by-token for instant first paint.
 * **Backend Agnostic** – Works with either:
   * **[Ollama](https://ollama.ai/)** (default, runs everything locally), or
@@ -61,7 +62,7 @@ Configuration can be overridden with CLI flags, e.g. `./museweb -port 9000 -mode
 * Place text files in the prompts directory – `home.txt`, `about.txt`, etc.
 * The filename (without extension) becomes the route: `about.txt → /?prompt=about`.
 * **`system_prompt.txt` is the only file that *must* exist.** Define your site’s core rules and even entire pages inside this file if you want.
-* The special file `system_prompt.txt` is prepended to every request.
+* All prompt files are loaded from disk on every request, so you can edit them and see changes without restarting the server.
 * The prompt files included in this repo are **examples only**—update or replace them to suit your own site.
 * HTML, Markdown, or plain prose inside the prompt will be passed verbatim to the model – **sanitize accordingly before publishing**.
 
