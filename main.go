@@ -35,7 +35,7 @@ type Config struct {
 	} `yaml:"openai"`
 }
 
-const version = "1.0.2d"
+const version = "1.0.3"
 
 var systemPrompt string
 
@@ -113,14 +113,16 @@ func main() {
 	log.Println("✅ System prompt loaded successfully.")
 
 	// --- Setup HTTP Server ---
-	// Create a file server for the 'static' directory and handle favicon
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.HandleFunc("/favicon.svg", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "static/favicon.svg")
-	})
+	appHandler := http.HandlerFunc(handleRequest(*backend, *model, *promptsDir, *apiKey, *apiBase))
+	fs := http.FileServer(http.Dir("public"))
 
-	http.HandleFunc("/", handleRequest(*backend, *model, *promptsDir, *apiKey, *apiBase))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, ".") {
+			fs.ServeHTTP(w, r)
+			return
+		}
+		appHandler.ServeHTTP(w, r)
+	})
 
 	log.Printf("✨ MuseWeb v%s is live at http://%s:%s", version, *host, *port)
 	log.Printf("   (Using backend '%s', model '%s', and prompts from '%s')", *backend, *model, *promptsDir)
@@ -165,13 +167,6 @@ func loadConfig(path string) (*Config, error) {
 // handleRequest returns a handler function that processes incoming requests.
 func handleRequest(backend, modelName, promptsDir, apiKey, apiBase string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// --- Block Asset Requests ---
-		path := r.URL.Path
-		if strings.Contains(path, ".") && path != "/" {
-			log.Printf("🚫 Asset request blocked: %s", path)
-			http.NotFound(w, r)
-			return
-		}
 
 		// --- Determine which User Prompt to Load ---
 		promptName := r.URL.Query().Get("prompt")
