@@ -62,8 +62,9 @@ Configuration can be overridden with CLI flags, e.g. `./museweb -port 9000 -mode
 
 * Place text files in the prompts directory – `home.txt`, `about.txt`, etc.
 * The filename (without extension) becomes the route: `about.txt → /about`.
-* **`system_prompt.txt` is the only file that *must* exist.** Define your site's core rules and even entire pages inside this file if you want.
+* **`system_prompt.txt` is the only file that *must* exist.** Define your site's core rules, output protocols, and structural requirements here.
 * **`layout.txt` is a special file** that gets appended to the system prompt for all pages. Use it to define global layout, styling, and interactive elements that should be consistent across all pages.
+* **`layout.min.txt` is an optional alternative** to `layout.txt` that produces minified HTML output, saving tokens and reducing response size. The server will use this file instead of `layout.txt` if it exists.
 * All prompt files are loaded from disk on every request, so you can edit them and see changes without restarting the server.
 * The prompt files included in this repo are **examples only**—update or replace them to suit your own site.
 * HTML, Markdown, or plain prose inside the prompt will be passed verbatim to the model – **sanitize accordingly before publishing**.

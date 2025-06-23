@@ -1,49 +1,21 @@
-Global Layout Guidelines (Inspirational Brief v2)
+Layout Prompt
 
-Design Mission: Generate a webpage that feels like a personal, modern digital space. It should be clean, immersive, and intentional. The aesthetic is one of quiet confidence, where clarity is paramount, but with a spark of vibrant personality. Think "focused workspace meets digital art gallery."
+Directive: You are now in Layout Definition Mode. Your task is to apply a visual and interactive framework to the page, based on the creative brief below. All technical and structural rules have been provided previously.
 
-Creative Touchstones:
+---
+### Creative Brief
 
-    The Atmosphere: Dark & Focused
-    The foundation is a dark, immersive theme. It should feel deep and comfortable, drawing the user in and allowing the content to take center stage. Avoid a harsh, sterile black; aim for a sophisticated, near-black or deep charcoal that feels premium.
+**Design Mission:** Generate a webpage that feels like a personal, modern digital space. It should be clean, immersive, and intentional. The aesthetic is one of quiet confidence, where clarity is paramount, but with a spark of vibrant personality. Think "focused workspace meets digital art gallery."
 
-    The Spark: Electric & Intentional Color
-    Against the dark backdrop, a single, striking accent color should be used to provide energy and guide the user's eye. This color is for the most important interactive elements—links, active states, key actions. It should feel like a deliberate, electric pulse of color in an otherwise calm environment.
+**Creative Touchstones:**
 
-    The Voice: Clear & Confident Typography
-    Typography is the voice of the page. It must be crisp, modern, and exceptionally legible. The relationship between headings and paragraphs should be obvious and harmonious, creating a reading experience that is effortless and authoritative.
-
-    The Space: Clean & Dimensional
-    The layout should feel uncluttered and breathable. Use generous whitespace to frame your content, giving it room to exist. Think about creating a sense of depth; perhaps some elements feel closer to the user while others recede, creating a subtle, dimensional landscape.
-
-    The Feel: Responsive & Alive
-    The page should feel responsive to the user. Interactions—hovering over a link, clicking a button—should provide subtle, satisfying feedback. The interface should acknowledge the user's presence, making the experience feel less static and more like a conversation.
-
-Core Requirements (The Non-Negotiables):
-
-    Produce a single, valid HTML5 file with embedded CSS in the <head>.
-    The structure should be semantic, using <header>, <main>, and <footer>.
-    The markup itself should be pristine. It is the final product, not a template. It must be free of any developer notes, placeholder comments (,, etc.), or commented-out code.
-    The design must be fully responsive, looking just as good on a mobile phone as on a desktop.
-    Ensure text is legible and color contrast is accessible.
-
-Navigation & Interactivity:
-
-    Navigation links should use clean URLs: "/", "/about", "/tech_and_projects", etc.
-    Include JavaScript to highlight the current page in the navigation menu.
-    Example navigation highlighting code:
-    ```javascript
-    document.addEventListener('DOMContentLoaded', () => {
-      // Get the current path (removing leading slash)
-      const path = window.location.pathname.replace(/^\//, '') || 'home';
-      
-      // Find the matching navigation link and highlight it
-      const navLinks = document.querySelectorAll('nav a');
-      navLinks.forEach(link => {
-        const linkPath = link.getAttribute('href').replace(/^\//, '');
-        if ((linkPath === '' && path === 'home') || (linkPath === path)) {
-          link.classList.add('active');
-        }
-      });
-    });
-    ```
+* **The Atmosphere: Dark & Focused**
+    The foundation is a dark, immersive theme. It should feel deep and comfortable...
+* **The Spark: Electric & Intentional Color**
+    Against the dark backdrop, a single, striking accent color should provide energy...
+* **The Voice: Clear & Confident Typography**
+    Typography is the voice of the page. It must be crisp, modern, and exceptionally legible...
+* **The Space: Clean & Dimensional**
+    The layout should feel uncluttered and breathable...
+* **The Feel: Responsive & Alive**
+    The page should feel responsive to the user. Interactions should provide subtle, satisfying feedback...

@@ -10,6 +10,8 @@ model:
   backend: "openai"
   # The model name to use for the selected backend
   name: "gpt-4.1-nano"
+  # Enable the thinking tag for DeepSeek and r1-1776 models (true/false)
+  enable_thinking: false
 
 openai:
   # Your OpenAI API key. Can be left blank if using the OPENAI_API_KEY environment variable.

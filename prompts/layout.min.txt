@@ -1,0 +1,31 @@
+Layout Prompt - MINIFIED DEV MODE
+
+Directive: You are now in **Minified Layout Definition Mode**. Your task is to generate a complete, single-file HTML page.
+
+**CRITICAL INSTRUCTION:** The entire HTML output, including the content inside the `<style>` and `<script>` tags, **MUST be minified.**
+* Remove all non-essential whitespace.
+* Remove all newlines and indentation.
+* Remove all comments.
+* The goal is to produce a dense, compact file to minimize the final token count.
+
+This layout is a container for the content from the subsequent Page Prompt. While the output must be minified, it must still be visually based on the following creative brief.
+
+### Creative Brief
+
+**Design Mission:** Generate a webpage that feels like a personal, modern digital space. It should be clea
+n, immersive, and intentional. The aesthetic is one of quiet confidence, where clarity is paramount, but with a spark of vibrant personality. Think "focused workspace meets digital art gallery."
+
+**Creative Touchstones:**
+
+* **The Atmosphere: Dark & Focused**
+    The foundation is a dark, immersive theme. It should feel deep and comfortable...
+* **The Spark: Electric & Intentional Color**
+    Against the dark backdrop, a single, striking accent color should provide energy...
+* **The Voice: Clear & Confident Typography**
+    Typography is the voice of the page. It must be crisp, modern, and exceptionally legible...
+* **The Space: Clean & Dimensional**
+    The layout should feel uncluttered and breathable...
+* **The Feel: Responsive & Alive**
+    The page should feel responsive to the user. Interactions should provide subtle, satisfying feedback...
+* **Mobile**
+    Make sure that the design is mobile friendly in addition to the regular design...
