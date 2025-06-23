@@ -1,6 +1,8 @@
 # MuseWeb
 
-MuseWeb is an **experimental, prompt-driven web server** that streams HTML straight from plain-text prompts using a large-language model (LLM). Originally built “just for fun,” it currently serves as a proof-of-concept for what prompt-driven websites could become once local LLMs are fast and inexpensive. Even in this early state, it showcases the endless possibilities of minimal, fully self-hosted publishing.
+MuseWeb is an **experimental, prompt-driven web server** that streams HTML straight from plain-text prompts using a large-language model (LLM). Originally built "just for fun," it currently serves as a proof-of-concept for what prompt-driven websites could become once local LLMs are fast and inexpensive. Even in this early state, it showcases the endless possibilities of minimal, fully self-hosted publishing.
+
+**Version 1.1.0** introduces a complete modular architecture for improved maintainability and extensibility.
 
 ---
 
@@ -14,7 +16,10 @@ MuseWeb is an **experimental, prompt-driven web server** that streams HTML strai
   * Any **OpenAI-compatible** API (e.g. OpenAI, Together.ai, Groq, etc.).
 * **Single Binary** – Go-powered, ~7 MB static binary, no external runtime.
 * **Zero JS by Default** – Only the streamed HTML from the model is served; you can add your own assets in `public/`.
+* **Modular Architecture** – Clean separation of concerns with dedicated packages for configuration, server, models, and utilities.
 * **Configurable via `config.yaml`** – Port, model, backend, prompt directory, and OpenAI credentials.
+* **Environment Variable Support** – Falls back to `OPENAI_API_KEY` if not specified in config or flags.
+* **Thinking Tag Support** – Special handling for models that support "thinking" tags (e.g., DeepSeek and r1-1776).
 * **Detailed Logging** – Comprehensive logging of prompt file loading and request handling for easy debugging.
 
 ---
@@ -44,17 +49,33 @@ Copy `config.example.yaml` to `config.yaml` and tweak as needed:
 
 ```yaml
 server:
-  port: "8080"         # Port for HTTP server
+  address: "127.0.0.1"  # Interface to bind to (e.g., 127.0.0.1 or 0.0.0.0)
+  port: "8080"          # Port for HTTP server
   prompts_dir: "./prompts"  # Folder containing *.txt prompt files
+  debug: false          # Enable debug logging
 model:
-  backend: "ollama"    # "ollama" or "openai"
-  name: "llama3"       # Model name to use
+  backend: "ollama"     # "ollama" or "openai"
+  name: "llama3"        # Model name to use
+  enable_thinking: false # Enable thinking tag for supported models
 openai:
-  api_key: ""          # Required when backend = "openai"
+  api_key: ""           # Required when backend = "openai"
   api_base: "https://api.openai.com/v1" # Change for other providers
 ```
 
-Configuration can be overridden with CLI flags, e.g. `./museweb -port 9000 -model mistral`
+Configuration can be overridden with CLI flags:
+
+```bash
+# Example with command-line flags
+./museweb -port 9000 -model mistral -backend ollama -debug
+
+# View all available options
+./museweb -h
+```
+
+For OpenAI API keys, MuseWeb will check these sources in order:
+1. Command-line flag (`-api-key`)
+2. Configuration file (`config.yaml`)
+3. Environment variable (`OPENAI_API_KEY`)
 
 ---
 
@@ -71,6 +92,30 @@ Configuration can be overridden with CLI flags, e.g. `./museweb -port 9000 -mode
 * For best results, keep design instructions in `layout.txt` and focus content instructions in individual page prompts.
 
 ---
+
+## 🏗️ Architecture
+
+As of version 1.1.0, MuseWeb has been fully modularized with a clean separation of concerns:
+
+```
+/
+├── main.go           # Application entry point and orchestration
+├── config.yaml       # Configuration file
+├── public/           # Static files served directly
+├── prompts/          # Prompt text files
+└── pkg/              # Go packages
+    ├── config/       # Configuration loading and validation
+    ├── models/       # AI model backends (Ollama and OpenAI)
+    ├── server/       # HTTP server and request handling
+    └── utils/        # Utility functions for output processing
+```
+
+### Key Components
+
+* **Configuration**: The `config` package handles loading settings from YAML with sensible defaults.
+* **Model Abstraction**: The `models` package provides a common interface for different AI backends.
+* **HTTP Server**: The `server` package manages HTTP requests, static file serving, and prompt processing.
+* **Utilities**: The `utils` package contains functions for sanitizing and processing model outputs.
 
 ## 🤝 Contributing
 

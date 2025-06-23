@@ -1,0 +1,72 @@
+name: Build and Package Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    name: Build and Package
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            output_name: museweb-linux-amd64
+          - goos: linux
+            goarch: arm64
+            output_name: museweb-linux-arm64
+          - goos: darwin
+            goarch: arm64
+            output_name: museweb-darwin-arm64
+          - goos: windows
+            goarch: amd64
+            output_name: museweb-windows-amd64
+            extension: .exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          check-latest: true
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go build -v -o ${{ matrix.output_name }}${{ matrix.extension || '' }} .
+
+      - name: Create package directory
+        run: |
+          mkdir -p ${{ matrix.output_name }}/prompts
+          mkdir -p ${{ matrix.output_name }}/public
+          cp ${{ matrix.output_name }}${{ matrix.extension || '' }} ${{ matrix.output_name }}/
+          cp -r prompts/*txt ${{ matrix.output_name }}/prompts/
+          cp -r public/* ${{ matrix.output_name }}/public/
+          cp README.md ${{ matrix.output_name }}/
+          cp museweb-prompt-engineering.md ${{ matrix.output_name }}/
+          cp config.example.yaml ${{ matrix.output_name }}/
+
+      - name: Create archive
+        run: |
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -r ${{ matrix.output_name }}.zip ${{ matrix.output_name }}
+          else
+            tar -czf ${{ matrix.output_name }}.tar.gz ${{ matrix.output_name }}
+          fi
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./${{ matrix.output_name }}${{ matrix.goos == 'windows' && '.zip' || '.tar.gz' }}
+          asset_name: ${{ matrix.output_name }}${{ matrix.goos == 'windows' && '.zip' || '.tar.gz' }}
+          asset_content_type: ${{ matrix.goos == 'windows' && 'application/zip' || 'application/gzip' }}
