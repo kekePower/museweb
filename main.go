@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -40,7 +38,7 @@ type Config struct {
 	} `yaml:"openai"`
 }
 
-const version = "1.0.6e"
+const version = "1.0.7"
 
 // codeFenceRE removes markdown code fences like ```html and ```
 var codeFenceRE = regexp.MustCompile("```[a-zA-Z]*\\n?|```")
@@ -272,142 +270,6 @@ func streamOllamaResponse(w io.Writer, flusher http.Flusher, modelName, systemPr
 	})
 }
 
-// streamClaudeResponse handles streaming responses from Claude models with the correct API structure
-func streamClaudeResponse(ctx context.Context, w io.Writer, flusher http.Flusher, modelName, systemPrompt, userPrompt, apiKey, apiBase string) error {
-	// Determine the API endpoint
-	baseURL := "https://api.anthropic.com"
-	if apiBase != "" {
-		baseURL = apiBase
-	}
-
-	// Create the request body with the correct structure for Claude models
-	// The system prompt is a separate top-level parameter
-	requestBody := map[string]interface{}{
-		"model":  modelName,
-		"system": systemPrompt,
-		"messages": []map[string]string{
-			{"role": "user", "content": userPrompt},
-		},
-		"stream":     true,
-		"max_tokens": 4096,
-	}
-
-	// Marshal the request body to JSON
-	jsonData, err := json.Marshal(requestBody)
-	if err != nil {
-		log.Printf("❌ Failed to marshal Claude request: %v", err)
-		return err
-	}
-
-	// Create the HTTP request
-	req, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/v1/messages", bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Printf("❌ Failed to create Claude request: %v", err)
-		return err
-	}
-
-	// Set the headers
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", apiKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
-
-	// Create an HTTP client with appropriate timeouts
-	client := &http.Client{
-		Timeout: 5 * time.Minute,
-		Transport: &http.Transport{
-			ResponseHeaderTimeout: 2 * time.Minute,
-			TLSHandshakeTimeout:   30 * time.Second,
-			IdleConnTimeout:       90 * time.Second,
-		},
-	}
-
-	// Send the request
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("❌ Failed to send Claude request: %v", err)
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Check for error response
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		log.Printf("❌ Claude API error: %s - %s", resp.Status, string(body))
-		return fmt.Errorf("Claude API error: %s", resp.Status)
-	}
-
-	// Track if we've received any content
-	contentReceived := false
-
-	// Process the streaming response
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Skip empty lines
-		if line == "" || !strings.HasPrefix(line, "data: ") {
-			continue
-		}
-
-		// Extract the JSON data
-		jsonData := strings.TrimPrefix(line, "data: ")
-
-		// Check for the [DONE] message
-		if jsonData == "[DONE]" {
-			break
-		}
-
-		// Parse the JSON
-		var streamResponse map[string]interface{}
-		if err := json.Unmarshal([]byte(jsonData), &streamResponse); err != nil {
-			log.Printf("⚠️ Failed to parse Claude stream response: %v", err)
-			continue
-		}
-
-		// Extract the content delta
-		type Delta struct {
-			Type    string `json:"type"`
-			Content string `json:"text"`
-		}
-
-		// Navigate the response structure to find the content
-		if contentDelta, ok := streamResponse["delta"]; ok {
-			if deltaMap, ok := contentDelta.(map[string]interface{}); ok {
-				if text, ok := deltaMap["text"].(string); ok && text != "" {
-					contentReceived = true
-
-					// Process and write the content
-					sanitized := sanitizeResponse(text)
-					_, writeErr := io.WriteString(w, sanitized)
-					if writeErr != nil {
-						log.Printf("🔶 Client disconnected. Aborting stream.")
-						return writeErr
-					}
-					flusher.Flush()
-				}
-			}
-		}
-	}
-
-	if !contentReceived {
-		log.Printf("⚠️ Claude stream ended without receiving any content")
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Printf("🔶 Claude stream error: %v", err)
-
-		// If we've already received some content, don't return an error to the user
-		if contentReceived {
-			log.Printf("⚠️ Stream error after partial content. Ending stream gracefully.")
-			return nil
-		}
-		return err
-	}
-
-	return nil
-}
-
-// printRequestDebugInfo prints the request information in JSON format for debugging
 func printRequestDebugInfo(backend, modelName, systemPrompt, userPrompt string) {
 	type DebugMessage struct {
 		Role    string `json:"role"`
@@ -460,15 +322,7 @@ func streamOpenAIResponse(w io.Writer, flusher http.Flusher, modelName, systemPr
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	// Check if the model name contains "claude" (case insensitive)
-	isClaudeModel := strings.Contains(strings.ToLower(modelName), "claude")
-
-	// For Claude models, we need to use a custom HTTP client to properly structure the request
-	if isClaudeModel {
-		return streamClaudeResponse(ctx, w, flusher, modelName, systemPrompt, userPrompt, apiKey, apiBase)
-	}
-
-	// For non-Claude models, use the standard OpenAI client
+	// Use the standard OpenAI client for all models
 	config := openai.DefaultConfig(apiKey)
 	if apiBase != "" {
 		config.BaseURL = apiBase
@@ -490,7 +344,7 @@ func streamOpenAIResponse(w io.Writer, flusher http.Flusher, modelName, systemPr
 	req := openai.ChatCompletionRequest{
 		Model:     modelName,
 		Stream:    true,
-		MaxTokens: 4096,
+		MaxTokens: 6144,
 		Messages: []openai.ChatCompletionMessage{
 			{Role: openai.ChatMessageRoleSystem, Content: systemPrompt},
 			{Role: openai.ChatMessageRoleUser, Content: userPrompt},
