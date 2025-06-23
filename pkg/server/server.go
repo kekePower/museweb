@@ -99,18 +99,52 @@ func HandleRequest(backend, modelName, promptsDir, apiKey, apiBase string, debug
 			return
 		}
 
-		// Extract system prompt and user prompt from the file
-		// The first line is the system prompt, the rest is the user prompt
-		promptContent := string(promptData)
-		lines := strings.SplitN(promptContent, "\n", 2)
+		// Load the system prompt from system_prompt.txt
+		systemPromptPath := filepath.Join(promptsDir, "system_prompt.txt")
+		var systemPrompt string
 
-		var systemPrompt, userPrompt string
-		if len(lines) > 0 {
-			systemPrompt = lines[0]
+		// Check if system_prompt.txt exists
+		if _, err := os.Stat(systemPromptPath); !os.IsNotExist(err) {
+			// Read the system prompt file
+			systemPromptData, err := os.ReadFile(systemPromptPath)
+			if err != nil {
+				log.Printf("Warning: Error reading system_prompt.txt: %v", err)
+			} else {
+				systemPrompt = string(systemPromptData)
+			}
+		} else {
+			log.Printf("Warning: system_prompt.txt not found in %s", promptsDir)
 		}
-		if len(lines) > 1 {
-			userPrompt = lines[1]
+
+		// Check for layout files
+		layoutMinPath := filepath.Join(promptsDir, "layout.min.txt")
+		layoutPath := filepath.Join(promptsDir, "layout.txt")
+		var layoutContent string
+
+		// First try layout.min.txt, then fall back to layout.txt
+		if _, err := os.Stat(layoutMinPath); !os.IsNotExist(err) {
+			layoutData, err := os.ReadFile(layoutMinPath)
+			if err == nil {
+				layoutContent = string(layoutData)
+			}
+		} else if _, err := os.Stat(layoutPath); !os.IsNotExist(err) {
+			layoutData, err := os.ReadFile(layoutPath)
+			if err == nil {
+				layoutContent = string(layoutData)
+			}
 		}
+
+		// If we have a layout, append it to the system prompt
+		if layoutContent != "" {
+			if systemPrompt != "" {
+				systemPrompt += "\n\n" + layoutContent
+			} else {
+				systemPrompt = layoutContent
+			}
+		}
+
+		// The prompt file content becomes the user prompt
+		userPrompt := string(promptData)
 
 		// Get user input from POST data if available
 		if r.Method == "POST" {
