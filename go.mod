@@ -1,4 +1,4 @@
-module museweb
+module github.com/kekePower/museweb
 
 go 1.24.4
 
