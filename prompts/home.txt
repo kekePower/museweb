@@ -1,5 +1,14 @@
-Generate the "Home" page for this technology blog.
-Create a strong, concise hero section that immediately tells visitors what the site is about: local AI, Linux, self-hosting, and owning your tech.
-The tone should be direct and welcome "curious humans who build, break, and explore."
-The page should highlight the kind of content available (guides, scripts, honest thoughts) and encourage exploration of the other sections using beautiful cards and soft, muted gradients.
-The home page is the first page a visitor will see, so it should be engaging and inviting.
+Generate the "Home" page for this technology blog. It should be engaging and inviting as the first page a visitor sees.
+
+1.  **Hero Section:** Create a strong, concise hero section that immediately establishes the site's identity.
+    * It MUST feature the main heading "kekePower".
+    * It MUST include a powerful tagline that reflects the core identity, such as "Championing Mageia Linux, Packaging, and Open-Source Innovation."
+    * The overall tone should be direct and welcoming to "curious humans who build, break, and explore."
+
+2.  **Content Pillars:** Below the hero, the page should highlight the kind of content available (guides, scripts, honest thoughts).
+    * Present these as three visually distinct sections or cards.
+    * The design should incorporate soft, muted gradients as requested, making the page visually appealing.
+
+3.  **Call To Action:** The page needs a unique Call To Action that tells the visitor to try reloading the page.
+    * You can phrase it simply as "Try Reloading The Page. Just try it!"
+    * **IMPORTANT:** If you create a button or a link for this CTA, it MUST link to "/" to ensure it triggers a page reload and demonstrates the dynamic nature of the site.

@@ -15,6 +15,7 @@ MuseWeb is an **experimental, prompt-driven web server** that streams HTML strai
 * **Single Binary** – Go-powered, ~7 MB static binary, no external runtime.
 * **Zero JS by Default** – Only the streamed HTML from the model is served; you can add your own assets in `public/`.
 * **Configurable via `config.yaml`** – Port, model, backend, prompt directory, and OpenAI credentials.
+* **Detailed Logging** – Comprehensive logging of prompt file loading and request handling for easy debugging.
 
 ---
 
@@ -60,11 +61,13 @@ Configuration can be overridden with CLI flags, e.g. `./museweb -port 9000 -mode
 ## 📝 Writing Prompts
 
 * Place text files in the prompts directory – `home.txt`, `about.txt`, etc.
-* The filename (without extension) becomes the route: `about.txt → /?prompt=about`.
-* **`system_prompt.txt` is the only file that *must* exist.** Define your site’s core rules and even entire pages inside this file if you want.
+* The filename (without extension) becomes the route: `about.txt → /about`.
+* **`system_prompt.txt` is the only file that *must* exist.** Define your site's core rules and even entire pages inside this file if you want.
+* **`layout.txt` is a special file** that gets appended to the system prompt for all pages. Use it to define global layout, styling, and interactive elements that should be consistent across all pages.
 * All prompt files are loaded from disk on every request, so you can edit them and see changes without restarting the server.
 * The prompt files included in this repo are **examples only**—update or replace them to suit your own site.
 * HTML, Markdown, or plain prose inside the prompt will be passed verbatim to the model – **sanitize accordingly before publishing**.
+* For best results, keep design instructions in `layout.txt` and focus content instructions in individual page prompts.
 
 ---
 
