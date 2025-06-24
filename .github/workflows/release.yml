@@ -4,6 +4,10 @@ on:
   release:
     types: [created]
   workflow_dispatch:
+
+# Add explicit permissions for the GITHUB_TOKEN
+permissions:
+  contents: write # This allows the action to create releases
     # Allow manual triggering for testing
 
 jobs:
