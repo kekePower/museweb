@@ -58,21 +58,25 @@ jobs:
 
       - name: Create package directory
         run: |
-          mkdir -p ${{ matrix.output_name }}/prompts
-          mkdir -p ${{ matrix.output_name }}/public
-          cp ${{ matrix.output_name }}${{ matrix.extension || '' }} ${{ matrix.output_name }}/
-          cp -r prompts/*txt ${{ matrix.output_name }}/prompts/
-          cp -r public/* ${{ matrix.output_name }}/public/
-          cp README.md ${{ matrix.output_name }}/
-          cp museweb-prompt-engineering.md ${{ matrix.output_name }}/
-          cp config.example.yaml ${{ matrix.output_name }}/
+          # Get version from main.go
+          VERSION=$(grep -oP 'const version = "\K[^"]+' main.go)
+          mkdir -p museweb-$VERSION/prompts
+          mkdir -p museweb-$VERSION/public
+          cp ${{ matrix.output_name }}${{ matrix.extension || '' }} museweb-$VERSION/
+          cp -r prompts/*txt museweb-$VERSION/prompts/
+          cp -r public/* museweb-$VERSION/public/
+          cp README.md museweb-$VERSION/
+          cp museweb-prompt-engineering.md museweb-$VERSION/
+          cp config.example.yaml museweb-$VERSION/
 
       - name: Create archive
         run: |
+          # Get version from main.go
+          VERSION=$(grep -oP 'const version = "\K[^"]+' main.go)
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -r ${{ matrix.output_name }}.zip ${{ matrix.output_name }}
+            zip -r ${{ matrix.output_name }}.zip museweb-$VERSION
           else
-            tar -czf ${{ matrix.output_name }}.tar.gz ${{ matrix.output_name }}
+            tar -czf ${{ matrix.output_name }}.tar.gz museweb-$VERSION
           fi
 
       - name: Upload release asset
