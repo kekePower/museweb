@@ -95,8 +95,11 @@ func ShouldSanitize(modelName string, enableThinking bool) bool {
 
 // IsThinkingEnabledModel checks if the model is one that supports the thinking tag
 func IsThinkingEnabledModel(modelName string) bool {
-	return strings.Contains(strings.ToLower(modelName), "deepseek") ||
-		strings.Contains(strings.ToLower(modelName), "r1-1776")
+	modelNameLower := strings.ToLower(modelName)
+	return strings.Contains(modelNameLower, "deepseek") ||
+		strings.Contains(modelNameLower, "r1-1776") ||
+		strings.Contains(modelNameLower, "qwen") ||
+		strings.Contains(modelNameLower, "qwen3")
 }
 
 // ModelResponse represents a structured response from the model with separate thinking and answer fields
