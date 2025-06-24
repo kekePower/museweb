@@ -13,7 +13,7 @@ import (
 	"github.com/kekePower/museweb/pkg/utils"
 )
 
-const version = "1.1.2"
+const version = "1.1.3-dev"
 
 func main() {
 	// --- Load Configuration ---
@@ -29,8 +29,23 @@ func main() {
 	promptsDir := flag.String("prompts", cfg.Server.PromptsDir, "Directory containing prompt files")
 	backend := flag.String("backend", cfg.Model.Backend, "AI backend to use (ollama or openai)")
 	model := flag.String("model", cfg.Model.Name, "Model name to use")
-	apiKey := flag.String("api-key", cfg.OpenAI.APIKey, "API key for OpenAI-compatible APIs")
-	apiBase := flag.String("api-base", cfg.OpenAI.APIBase, "Base URL for OpenAI-compatible APIs")
+	// Default API key based on backend
+	var defaultAPIKey string
+	if strings.ToLower(cfg.Model.Backend) == "openai" {
+		defaultAPIKey = cfg.OpenAI.APIKey
+	} else {
+		defaultAPIKey = cfg.Ollama.APIKey
+	}
+	apiKey := flag.String("api-key", defaultAPIKey, "API key for the selected backend (ignored if not required)")
+
+	// Choose sensible default for api-base depending on backend in config
+	var defaultAPIBase string
+	if strings.ToLower(cfg.Model.Backend) == "openai" {
+		defaultAPIBase = cfg.OpenAI.APIBase
+	} else {
+		defaultAPIBase = cfg.Ollama.APIBase
+	}
+	apiBase := flag.String("api-base", defaultAPIBase, "Base URL for the selected backend")
 	debug := flag.Bool("debug", cfg.Server.Debug, "Enable debug mode")
 	enableThinking := flag.Bool("enable-thinking", cfg.Model.EnableThinking, "Enable thinking tag for DeepSeek and r1-1776 models")
 	flag.Parse()
@@ -41,9 +56,13 @@ func main() {
 	}
 
 	// --- Final Configuration ---
-	// If the api-key flag is still empty, try the environment variable as a last resort.
+	// If the api-key flag is still empty, try backend-specific environment variable as a last resort.
 	if *apiKey == "" {
-		*apiKey = os.Getenv("OPENAI_API_KEY")
+		if strings.ToLower(*backend) == "openai" {
+			*apiKey = os.Getenv("OPENAI_API_KEY")
+		} else {
+			*apiKey = os.Getenv("OLLAMA_API_KEY")
+		}
 	}
 
 	// --- Validate OpenAI Config ---

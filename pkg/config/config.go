@@ -24,6 +24,10 @@ type Config struct {
 		APIKey  string `yaml:"api_key"`
 		APIBase string `yaml:"api_base"`
 	} `yaml:"openai"`
+	Ollama struct {
+		APIKey  string `yaml:"api_key"`
+		APIBase string `yaml:"api_base"`
+	} `yaml:"ollama"`
 }
 
 // Load reads the configuration from a YAML file
@@ -36,6 +40,7 @@ func Load(path string) (*Config, error) {
 	cfg.Server.PromptsDir = "prompts"
 	cfg.Model.Backend = "ollama"
 	cfg.Model.Name = "llama3"
+	cfg.Ollama.APIBase = "http://localhost:11434"
 
 	// Read the config file
 	data, err := os.ReadFile(path)

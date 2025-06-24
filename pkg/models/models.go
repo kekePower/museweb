@@ -28,6 +28,8 @@ type ModelHandler interface {
 // OllamaHandler implements the ModelHandler interface for Ollama
 type OllamaHandler struct {
 	ModelName      string
+	APIKey         string
+	APIBase        string
 	EnableThinking bool
 }
 
@@ -52,6 +54,8 @@ func NewModelHandler(backend, modelName, apiKey, apiBase string, enableThinking 
 	default:
 		return &OllamaHandler{
 			ModelName:      modelName,
+			APIKey:         apiKey,
+			APIBase:        apiBase,
 			EnableThinking: enableThinking,
 		}
 	}
@@ -61,9 +65,25 @@ func NewModelHandler(backend, modelName, apiKey, apiBase string, enableThinking 
 func (h *OllamaHandler) StreamResponse(w io.Writer, flusher http.Flusher, systemPrompt, userPrompt string) error {
 	ctx := context.Background()
 
-	// Create Ollama client with default endpoint
-	baseURL, _ := url.Parse("http://localhost:11434")
-	client := api.NewClient(baseURL, http.DefaultClient)
+	// Determine base URL (config api_base or fallback)
+	endpoint := h.APIBase
+	if endpoint == "" {
+		endpoint = "http://localhost:11434"
+	}
+	baseURL, _ := url.Parse(endpoint)
+	
+	// Prepare HTTP client, adding Authorization header if API key supplied
+	httpClient := http.DefaultClient
+	if h.APIKey != "" {
+		httpClient = &http.Client{
+			Transport: &authTransport{
+				base:   http.DefaultTransport,
+				apiKey: h.APIKey,
+			},
+			Timeout: 5 * time.Minute,
+		}
+	}
+	client := api.NewClient(baseURL, httpClient)
 
 	streamOption := true
 	req := api.ChatRequest{
@@ -108,6 +128,19 @@ func (h *OllamaHandler) StreamResponse(w io.Writer, flusher http.Flusher, system
 type customHeaderTransport struct {
 	base     http.RoundTripper
 	thinking bool
+}
+
+// authTransport adds Bearer token for Ollama requests when API key provided
+type authTransport struct {
+	base   http.RoundTripper
+	apiKey string
+}
+
+func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if t.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+t.apiKey)
+	}
+	return t.base.RoundTrip(req)
 }
 
 // RoundTrip implements the http.RoundTripper interface

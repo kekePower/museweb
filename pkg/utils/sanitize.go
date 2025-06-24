@@ -90,17 +90,15 @@ func ExtractThinking(output string) string {
 // If thinking=true is sent to server, server handles sanitization so we should skip it
 // If thinking=false is sent to server, we handle sanitization internally
 func ShouldSanitize(modelName string, enableThinking bool) bool {
-	// If thinking is enabled, the server will handle sanitization
-	if enableThinking {
-		return false
-	}
+    // Skip internal sanitization only when the model itself supports thinking tags
+    // AND the caller has explicitly enabled thinking. In that scenario, we assume
+    // the server (or middleware) will handle sanitisation appropriately.
+    if enableThinking && IsThinkingEnabledModel(modelName) {
+        return false
+    }
 
-	// For models that support thinking tags, we need to sanitize
-	if IsThinkingEnabledModel(modelName) {
-		return true
-	}
-
-	return true // Default to sanitizing for safety
+    // In every other case we apply our own sanitisation layer for safety.
+    return true
 }
 
 // IsThinkingEnabledModel checks if the model is one that supports the thinking tag

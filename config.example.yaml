@@ -18,3 +18,9 @@ openai:
   api_key: ""
   # The base URL for the OpenAI API. Useful for local models like LM Studio.
   api_base: "http://api.openai.com/v1"
+
+ollama:
+  # Your Ollama API key. Can be left blank if using the OLLAMA_API_KEY environment variable.
+  api_key: ""
+  # Base URL for your local Ollama server.
+  api_base: "http://localhost:11434"
