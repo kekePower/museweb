@@ -81,7 +81,7 @@ jobs:
             tar -czf ${{ matrix.output_name }}.tar.gz museweb-$VERSION
           fi
 
-      # For workflow_dispatch, we'll just create artifacts instead of uploading to a release
+      # For workflow_dispatch, we'll create artifacts for easy download
       - name: Upload build artifact
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
@@ -96,5 +96,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ./${{ matrix.output_name }}${{ matrix.goos == 'windows' && '.zip' || '.tar.gz' }}
+          tag_name: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
