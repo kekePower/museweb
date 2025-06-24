@@ -109,7 +109,9 @@ func IsThinkingEnabledModel(modelName string) bool {
 	return strings.Contains(modelNameLower, "deepseek") ||
 		strings.Contains(modelNameLower, "r1-1776") ||
 		strings.Contains(modelNameLower, "qwen") ||
-		strings.Contains(modelNameLower, "qwen3")
+		strings.Contains(modelNameLower, "qwen3") ||
+		strings.Contains(modelNameLower, "sonar-reasoning") ||
+		strings.Contains(modelNameLower, "sonar-reasoning-pro")
 }
 
 // ModelResponse represents a structured response from the model with separate thinking and answer fields
