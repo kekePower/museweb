@@ -81,7 +81,18 @@ jobs:
             tar -czf ${{ matrix.output_name }}.tar.gz museweb-$VERSION
           fi
 
+      # For workflow_dispatch, we'll just create artifacts instead of uploading to a release
+      - name: Upload build artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.output_name }}${{ matrix.goos == 'windows' && '-zip' || '-tar-gz' }}
+          path: ./${{ matrix.output_name }}${{ matrix.goos == 'windows' && '.zip' || '.tar.gz' }}
+          retention-days: 5
+          
+      # For release events, upload to the release
       - name: Upload release asset
+        if: github.event_name == 'release'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
