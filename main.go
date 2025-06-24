@@ -13,7 +13,7 @@ import (
 	"github.com/kekePower/museweb/pkg/utils"
 )
 
-const version = "1.1.1"
+const version = "1.1.2"
 
 func main() {
 	// --- Load Configuration ---

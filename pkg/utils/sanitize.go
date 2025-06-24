@@ -33,6 +33,9 @@ func SanitizeResponse(s string) string {
 	// This regex matches <think> tag, any content inside (including newlines), and the closing </think> tag
 	cleaned = regexp.MustCompile(`(?i)<think>(?s:.*?)</think>`).ReplaceAllString(cleaned, "")
 
+	// Handle Qwen3 style plain text thinking tags without angle brackets
+	cleaned = regexp.MustCompile(`(?i)\bthink\b(?s:.*?)\b/think\b`).ReplaceAllString(cleaned, "")
+
 	// Also try to clean up any JSON-formatted thinking that might be in the response
 	// This is a common pattern in models that use JSON for structured outputs
 	jsonThinkingRegex := regexp.MustCompile(`(?i)"thinking"\s*:\s*".*?",?`)
@@ -59,6 +62,13 @@ func ExtractThinking(output string) string {
 	// First try to extract content from <think> tags
 	thinkRegex := regexp.MustCompile(`(?i)<think>((?s:.*?))</think>`)
 	matches := thinkRegex.FindStringSubmatch(output)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+
+	// Try to extract content from Qwen3 style plain text thinking tags
+	plainThinkRegex := regexp.MustCompile(`(?i)\bthink\b((?s:.*?))\b/think\b`)
+	matches = plainThinkRegex.FindStringSubmatch(output)
 	if len(matches) > 1 {
 		return matches[1]
 	}
