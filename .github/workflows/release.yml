@@ -84,7 +84,7 @@ jobs:
       # For workflow_dispatch, we'll just create artifacts instead of uploading to a release
       - name: Upload build artifact
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.output_name }}${{ matrix.goos == 'windows' && '-zip' || '-tar-gz' }}
           path: ./${{ matrix.output_name }}${{ matrix.goos == 'windows' && '.zip' || '.tar.gz' }}
@@ -93,11 +93,8 @@ jobs:
       # For release events, upload to the release
       - name: Upload release asset
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./${{ matrix.output_name }}${{ matrix.goos == 'windows' && '.zip' || '.tar.gz' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./${{ matrix.output_name }}${{ matrix.goos == 'windows' && '.zip' || '.tar.gz' }}
-          asset_name: ${{ matrix.output_name }}${{ matrix.goos == 'windows' && '.zip' || '.tar.gz' }}
-          asset_content_type: ${{ matrix.goos == 'windows' && 'application/zip' || 'application/gzip' }}
