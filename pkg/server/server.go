@@ -28,7 +28,7 @@ type DebugRequest struct {
 }
 
 // PrintRequestDebugInfo logs debug information about the request
-func PrintRequestDebugInfo(backend, modelName, systemPrompt, userPrompt string, enableThinking bool) {
+func PrintRequestDebugInfo(backend, modelName, systemPrompt, userPrompt string, disableThinking bool) {
 	// Create a debug request object for structured logging
 	debugReq := DebugRequest{
 		Backend: backend,
@@ -40,7 +40,7 @@ func PrintRequestDebugInfo(backend, modelName, systemPrompt, userPrompt string, 
 				Content: userPrompt,
 			},
 		},
-		Thinking: enableThinking,
+		Thinking: !disableThinking,
 	}
 
 	// Log the debug information
@@ -163,7 +163,7 @@ func HandleRequest(backend, modelName, promptsDir, apiKey, apiBase string, debug
 
 		// Print debug information if enabled
 		if debug {
-			PrintRequestDebugInfo(backend, modelName, systemPrompt, userPrompt, enableThinking)
+			PrintRequestDebugInfo(backend, modelName, systemPrompt, userPrompt, !enableThinking)
 		}
 
 		// Set content type for streaming response
@@ -178,7 +178,7 @@ func HandleRequest(backend, modelName, promptsDir, apiKey, apiBase string, debug
 		}
 
 		// Create model handler based on backend
-		handler := models.NewModelHandler(backend, modelName, apiKey, apiBase, enableThinking)
+		handler := models.NewModelHandler(backend, modelName, apiKey, apiBase, debug, !enableThinking)
 
 		// Stream the response
 		err = handler.StreamResponse(w, flusher, systemPrompt, userPrompt)

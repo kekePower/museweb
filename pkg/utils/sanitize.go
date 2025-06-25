@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"regexp"
 	"strings"
 )
@@ -51,6 +52,40 @@ func SanitizeResponse(s string) string {
 	// Make sure we're not accidentally removing the opening < character
 	if strings.HasPrefix(cleaned, "!DOCTYPE") || strings.HasPrefix(cleaned, "html") {
 		cleaned = "<" + cleaned
+	}
+	
+	// Ensure we have a complete HTML document if the content appears to be HTML
+	if strings.Contains(cleaned, "<html") && !strings.Contains(cleaned, "<!DOCTYPE html>") {
+		// Add DOCTYPE if missing
+		if !strings.HasPrefix(cleaned, "<!") {
+			cleaned = "<!DOCTYPE html>\n" + cleaned
+		}
+	}
+	
+	// If we don't have any HTML tags at all, wrap the content in a basic HTML document
+	if !strings.Contains(cleaned, "<html") && !strings.Contains(cleaned, "<body") {
+		// Check if this looks like plain text content that should be wrapped in HTML
+		if len(cleaned) > 0 && !strings.HasPrefix(cleaned, "<") {
+			// Wrap in a basic HTML document with proper styling
+			cleaned = fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MuseWeb Response</title>
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; line-height: 1.6; padding: 1rem; max-width: 800px; margin: 0 auto; }
+    pre { background-color: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+    code { font-family: monospace; background-color: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="content">
+    %s
+  </div>
+</body>
+</html>`, strings.ReplaceAll(cleaned, "\n", "<br>\n"))
+		}
 	}
 
 	return cleaned
@@ -109,7 +144,9 @@ func IsThinkingEnabledModel(modelName string) bool {
 		strings.Contains(modelNameLower, "qwen") ||
 		strings.Contains(modelNameLower, "qwen3") ||
 		strings.Contains(modelNameLower, "sonar-reasoning") ||
-		strings.Contains(modelNameLower, "sonar-reasoning-pro")
+		strings.Contains(modelNameLower, "sonar-reasoning-pro") ||
+		strings.Contains(modelNameLower, "gemini-2.5-flash-lite-preview-06-17") ||
+		strings.Contains(modelNameLower, "gemini-2.5-flash")
 }
 
 // ModelResponse represents a structured response from the model with separate thinking and answer fields
@@ -121,6 +158,8 @@ type ModelResponse struct {
 // ProcessModelOutput attempts to parse structured data and conditionally sanitizes the result
 // based on model and thinking settings
 func ProcessModelOutput(rawOutput string, modelName string, enableThinking bool) string {
+	// Log the raw output length for debugging
+	log.Printf("Processing model output: %d bytes from model %s", len(rawOutput), modelName)
 	// If we shouldn't sanitize based on model/settings, return as is
 	if !ShouldSanitize(modelName, enableThinking) {
 		return rawOutput

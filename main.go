@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/kekePower/museweb/pkg/config"
 	"github.com/kekePower/museweb/pkg/server"
@@ -47,7 +48,7 @@ func main() {
 	}
 	apiBase := flag.String("api-base", defaultAPIBase, "Base URL for the selected backend")
 	debug := flag.Bool("debug", cfg.Server.Debug, "Enable debug mode")
-	enableThinking := flag.Bool("enable-thinking", cfg.Model.EnableThinking, "Enable thinking tag for DeepSeek and r1-1776 models")
+	disableThinking := flag.Bool("disable-thinking", cfg.Model.DisableThinking, "Disable thinking tag for DeepSeek and r1-1776 models")
 	flag.Parse()
 
 	if *showVersion {
@@ -71,7 +72,7 @@ func main() {
 	}
 
 	// --- Setup HTTP Server ---
-	serverHandler := server.HandleRequest(*backend, *model, *promptsDir, *apiKey, *apiBase, *debug, *enableThinking)
+	serverHandler := server.HandleRequest(*backend, *model, *promptsDir, *apiKey, *apiBase, *debug, !*disableThinking)
 	fs := http.FileServer(http.Dir("public"))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +91,7 @@ func main() {
 	}
 	log.Printf("✨ MuseWeb v%s is live at http://%s:%s", version, displayHost, *port)
 	log.Printf("   (Using backend '%s', model '%s', and prompts from '%s')", *backend, *model, *promptsDir)
-	if *enableThinking && utils.IsThinkingEnabledModel(*model) {
+	if !*disableThinking && utils.IsThinkingEnabledModel(*model) {
 		log.Printf("   🧠 Thinking tag enabled for %s model", *model)
 	}
 
@@ -98,7 +99,16 @@ func main() {
 	if listenAddr == "0.0.0.0" {
 		listenAddr = ""
 	}
-	err = http.ListenAndServe(listenAddr+":"+*port, nil)
+
+	// Create a custom HTTP server with longer timeouts for AI responses
+	server := &http.Server{
+		Addr:         listenAddr + ":" + *port,
+		ReadTimeout:  60 * time.Second,  // Time to read request
+		WriteTimeout: 300 * time.Second, // Time to write response (5 minutes for large AI responses)
+		IdleTimeout:  120 * time.Second, // Time to keep connections alive
+	}
+
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatalf("❌ Failed to start server: %v", err)
 	}

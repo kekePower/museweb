@@ -17,8 +17,8 @@ type Config struct {
 	Model struct {
 		Backend string `yaml:"backend"`
 		Name    string `yaml:"name"`
-		// EnableThinking enables the thinking tag for DeepSeek and r1-1776 models
-		EnableThinking bool `yaml:"enable_thinking"`
+		// DisableThinking disables the thinking tag for DeepSeek and r1-1776 models
+		DisableThinking bool `yaml:"disable_thinking"`
 	} `yaml:"model"`
 	OpenAI struct {
 		APIKey  string `yaml:"api_key"`

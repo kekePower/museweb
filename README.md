@@ -56,7 +56,7 @@ server:
 model:
   backend: "ollama"     # "ollama" or "openai"
   name: "llama3"        # Model name to use
-  enable_thinking: false # Enable thinking tag for supported models
+  disable_thinking: false # Disable thinking tag for supported models
 openai:
   api_key: ""           # Required when backend = "openai"
   api_base: "https://api.openai.com/v1" # Change for other providers
