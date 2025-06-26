@@ -68,9 +68,11 @@ jobs:
           VERSION=$(grep -oP 'const version = "\K[^"]+' main.go)
           mkdir -p museweb-$VERSION/prompts
           mkdir -p museweb-$VERSION/public
+          mkdir -p museweb-$VERSION/examples
           cp ${{ matrix.output_name }}${{ matrix.extension || '' }} museweb-$VERSION/
           cp -r prompts/*txt museweb-$VERSION/prompts/
           cp -r public/* museweb-$VERSION/public/
+          cp -r examples/* museweb-$VERSION/examples/
           cp README.md museweb-$VERSION/
           cp museweb-prompt-engineering.md museweb-$VERSION/
           cp config.example.yaml museweb-$VERSION/
