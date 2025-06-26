@@ -76,12 +76,12 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 		},
 		"stream": true,
 	}
-	
+
 	// For reasoning models, always disable thinking to avoid reasoning output in web pages
 	if utils.IsReasoningModel(h.ModelName, utils.ReasoningModelPatterns) {
 		payload["thinking"] = false
 	}
-	
+
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("error creating JSON payload: %w", err)
@@ -417,6 +417,6 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 	if h.Debug {
 		log.Printf("[DEBUG] Streaming complete. Final output length: %d bytes", len(finalOutput))
 	}
-	
+
 	return nil
 }

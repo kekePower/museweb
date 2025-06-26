@@ -1,0 +1,6 @@
+The layout is defined by `/style.css`. The structure should be semantic and simple.
+- Use a `<main>` tag to wrap the primary content of the page.
+- The page title should be an `<h1>`.
+- Use `<h2>` for subheadings.
+- Use `<p>` for paragraphs.
+- The overall structure is a single, centered column for maximum readability.

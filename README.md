@@ -96,6 +96,43 @@ For OpenAI API keys, MuseWeb will check these sources in order:
 
 ---
 
+## 📚 Examples
+
+The `examples/` directory contains 4 complete website templates showcasing different styles and approaches:
+
+### Available Examples
+
+* **`minimalist/`** – Clean, minimal design focused on typography and whitespace
+* **`corporate/`** – Professional business website with multiple pages and corporate styling  
+* **`fantasy/`** – Creative fantasy-themed site with rich imagery and atmospheric design
+* **`98retro/`** – Nostalgic late-90s web aesthetic with retro styling and design elements
+
+### Using Examples
+
+Each example is a complete website template with:
+- `system_prompt.txt` – Core instructions and site personality
+- `layout.txt` – Global layout and styling definitions
+- Page prompts (e.g., `home.txt`, `about.txt`) – Individual page content
+- `public/` directory – CSS files and assets specific to that theme
+
+**To use an example:**
+
+1. Copy the example's prompt files to your main `prompts/` directory:
+   ```bash
+   cp examples/minimalist/*.txt prompts/
+   ```
+
+2. Copy the example's assets to your main `public/` directory:
+   ```bash
+   cp -r examples/minimalist/public/* public/
+   ```
+
+3. Restart MuseWeb to see the new theme in action
+
+**Note:** Make sure to copy the contents of the example's `public/` directory to the main `public/` directory so that CSS files and images are properly served.
+
+---
+
 ## 🏗️ Architecture
 
 As of version 1.1.0, MuseWeb has been fully modularized with a clean separation of concerns:

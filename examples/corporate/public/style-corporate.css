@@ -1,0 +1,80 @@
+/* Corporate Drone Zone CSS */
+body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    background-color: #f4f6f9;
+    color: #3b3f45;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    width: 960px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+#header {
+    background-color: #ffffff;
+    border-bottom: 3px solid #0d6efd;
+    padding: 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #0d6efd;
+    margin-left: 20px;
+}
+
+#navigation {
+    margin-right: 20px;
+}
+
+#navigation ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+#navigation ul li {
+    display: inline-block;
+    margin-left: 25px;
+}
+
+#navigation a {
+    color: #555;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+#navigation a:hover {
+    color: #0d6efd;
+}
+
+#main-content {
+    background-color: #ffffff;
+    padding: 30px;
+    margin-top: 20px;
+    border: 1px solid #e1e1e1;
+}
+
+h1 {
+    color: #2c3e50;
+    font-size: 28px;
+    border-bottom: 1px solid #eeeeee;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+
+footer {
+    text-align: center;
+    margin-top: 30px;
+    padding: 20px;
+    font-size: 12px;
+    color: #888;
+    border-top: 1px solid #e1e1e1;
+}

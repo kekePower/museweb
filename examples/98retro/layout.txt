@@ -1,0 +1,6 @@
+Forget modern layouts! This is pure 90s chaos.
+- Center everything you can with the `<center>` tag.
+- Use different font sizes and colors for every heading with the `<font size="..." color="...">` tag.
+- Use animated GIFs as dividers (`<hr>`).
+- The layout should feel cramped and busy. Tables for layout are encouraged if you want to get really authentic.
+- Don't worry about semantics at all. This is about VIBES.

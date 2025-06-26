@@ -1,0 +1,6 @@
+The layout is strictly defined by `/style.css`.
+- The main wrapper is a `<div class="container">`.
+- The header is a `<div id="header">`.
+- The main content area is a `<div id="main-content">`.
+- Use a single `<h1>` for the page title. Use `<p>` for text.
+- The structure is rigid and boxy, reflecting a standard corporate template.

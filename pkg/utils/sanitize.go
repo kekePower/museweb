@@ -61,7 +61,7 @@ func SanitizeResponse(s string) string {
 	if strings.HasPrefix(cleaned, "!DOCTYPE") || strings.HasPrefix(cleaned, "html") {
 		cleaned = "<" + cleaned
 	}
-	
+
 	// Ensure we have a complete HTML document if the content appears to be HTML
 	if strings.Contains(cleaned, "<html") && !strings.Contains(cleaned, "<!DOCTYPE html>") {
 		// Add DOCTYPE if missing
@@ -69,7 +69,7 @@ func SanitizeResponse(s string) string {
 			cleaned = "<!DOCTYPE html>\n" + cleaned
 		}
 	}
-	
+
 	// If we don't have any HTML tags at all, wrap the content in a basic HTML document
 	if !strings.Contains(cleaned, "<html") && !strings.Contains(cleaned, "<body") {
 		// Check if this looks like plain text content that should be wrapped in HTML
@@ -133,15 +133,15 @@ func ExtractThinking(output string) string {
 // If thinking=true is sent to server, server handles sanitization so we should skip it
 // If thinking=false is sent to server, we handle sanitization internally
 func ShouldSanitize(modelName string, enableThinking bool) bool {
-    // Skip internal sanitization only when the model itself supports thinking tags
-    // AND the caller has explicitly enabled thinking. In that scenario, we assume
-    // the server (or middleware) will handle sanitisation appropriately.
-    if enableThinking && IsThinkingEnabledModel(modelName) {
-        return false
-    }
+	// Skip internal sanitization only when the model itself supports thinking tags
+	// AND the caller has explicitly enabled thinking. In that scenario, we assume
+	// the server (or middleware) will handle sanitisation appropriately.
+	if enableThinking && IsThinkingEnabledModel(modelName) {
+		return false
+	}
 
-    // In every other case we apply our own sanitisation layer for safety.
-    return true
+	// In every other case we apply our own sanitisation layer for safety.
+	return true
 }
 
 // IsThinkingEnabledModel checks if the model is one that supports the thinking tag
@@ -150,11 +150,11 @@ func IsThinkingEnabledModel(modelName string) bool {
 	if len(ReasoningModelPatterns) > 0 {
 		return IsReasoningModel(modelName, ReasoningModelPatterns)
 	}
-	
+
 	// Fallback to hardcoded patterns for backward compatibility
 	// Using priority-based matching: more specific patterns first
 	modelNameLower := strings.ToLower(modelName)
-	
+
 	// Check specific patterns first
 	if strings.Contains(modelNameLower, "deepseek-r1-distill") {
 		return true
@@ -180,7 +180,7 @@ func IsThinkingEnabledModel(modelName string) bool {
 	if strings.Contains(modelNameLower, "qwen3") {
 		return true
 	}
-	
+
 	// Check general patterns last
 	if strings.Contains(modelNameLower, "deepseek") {
 		return true
@@ -188,7 +188,7 @@ func IsThinkingEnabledModel(modelName string) bool {
 	if strings.Contains(modelNameLower, "qwen") {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -198,9 +198,9 @@ func IsReasoningModel(modelName string, reasoningPatterns []string) bool {
 		// Fallback to the hardcoded function if no patterns are provided
 		return IsThinkingEnabledModel(modelName)
 	}
-	
+
 	modelNameLower := strings.ToLower(modelName)
-	
+
 	// Use priority-based matching: check patterns in order and return on first match
 	// More specific patterns should be listed first in the configuration
 	for _, pattern := range reasoningPatterns {

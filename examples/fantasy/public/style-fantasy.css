@@ -1,0 +1,66 @@
+/* Eldoria Compendium CSS */
+body {
+    font-family: "Georgia", "Times New Roman", serif;
+    background-color: #f5f1e8; /* Parchment color */
+    color: #4a3c2a; /* Dark brown text */
+    line-height: 1.6;
+    margin: 0;
+}
+
+.container {
+    display: flex;
+    max-width: 1100px;
+    margin: 1.5rem auto;
+    gap: 2rem;
+}
+
+.main-content {
+    flex: 3;
+    background-color: #fffdf6;
+    padding: 1.5rem 2rem;
+    border: 1px solid #dcd3bf;
+    border-radius: 3px;
+}
+
+.sidebar {
+    flex: 1;
+}
+
+h1, h2, h3 {
+    font-family: "Cinzel", serif; /* A more fantastical font, assumes Google Fonts or similar */
+    color: #5a2a0a;
+    border-bottom: 2px solid #dcd3bf;
+    padding-bottom: 0.5rem;
+}
+
+a {
+    color: #8c4c1a;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.infobox {
+    background-color: #f5f1e8;
+    border: 1px solid #dcd3bf;
+    padding: 1rem;
+    font-size: 0.9rem;
+    border-radius: 3px;
+}
+
+.infobox h3 {
+    margin-top: 0;
+    font-size: 1.1rem;
+    border-bottom: 1px solid #dcd3bf;
+}
+
+.infobox ul {
+    list-style: none;
+    padding: 0;
+}
+
+.infobox ul li {
+    margin-bottom: 0.5rem;
+}

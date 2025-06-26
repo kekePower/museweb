@@ -1,0 +1,60 @@
+/* Minimalist Blog CSS */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.7;
+    background-color: #fdfdfd;
+    color: #333;
+    max-width: 750px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+h1, h2, h3 {
+    font-family: "Georgia", serif;
+    color: #111;
+}
+
+a {
+    color: #007bff;
+    text-decoration: none;
+    border-bottom: 1px dotted #007bff;
+}
+
+a:hover {
+    color: #0056b3;
+    border-bottom-style: solid;
+}
+
+header {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+}
+
+header h1 a {
+    text-decoration: none;
+    border-bottom: none;
+    color: #111;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    gap: 1.5rem;
+}
+
+nav a {
+    text-decoration: none;
+    font-weight: bold;
+    color: #333;
+    border-bottom: none;
+}
+
+footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    font-size: 0.9rem;
+    color: #777;
+    border-top: 1px solid #eee;
+}

@@ -1,0 +1,6 @@
+The layout is a classic wiki-style page defined by /style.css.
+- The top-level element should be <div class="container">.
+- The container holds two children: <div class="main-content"> and <div class="sidebar">.
+- Main Content: Place the main article text here. Start with an <h1> for the entry's title. Use <h2> for sections like "History," "Geography," etc.
+- Sidebar: Inside the sidebar, create an <div class="infobox">.
+The infobox should contain a short, bulleted list of key facts (e.g., "Type: Mountain Range," "Location: Northern Continent," "Inhabitants: Stone Giants").
