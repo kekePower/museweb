@@ -14,7 +14,7 @@ package models
 
 // NewModelHandler creates a new model handler based on the backend type
 // This is the main factory function that external code should use to create model handlers
-func NewModelHandler(backend, modelName, apiKey, apiBase string, debug bool, disableThinking bool) ModelHandler {
+func NewModelHandler(backend, modelName, apiKey, apiBase string, debug bool) ModelHandler {
 	// Implementation is in interface.go
-	return newModelHandler(backend, modelName, apiKey, apiBase, debug, disableThinking)
+	return newModelHandler(backend, modelName, apiKey, apiBase, debug)
 }

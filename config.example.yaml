@@ -12,8 +12,18 @@ model:
   backend: "openai"
   # The model name to use for the selected backend
   name: "gpt-4.1-nano"
-  # Disable the thinking tag for DeepSeek and r1-1776 models (true/false)
-  disable_thinking: false
+  # List of model name patterns that support reasoning/thinking tags
+  # These patterns are checked in order (first match wins)
+  reasoning_models:
+    - "deepseek-r1-distill"  # DeepSeek R1 distilled models (most specific first)
+    - "sonar-reasoning-pro"  # Perplexity Sonar reasoning pro models
+    - "sonar-reasoning"      # Perplexity Sonar reasoning models
+    - "gemini-2.5-flash-lite-preview-06-17"  # Specific Gemini model
+    - "gemini-2.5-flash"     # Gemini 2.5 Flash models
+    - "r1-1776"              # OpenAI R1-1776 models
+    - "qwen3"                # Qwen3 models (specific)
+    - "deepseek"             # DeepSeek models (general, after specific)
+    - "qwen"                 # Qwen models (general, after specific)
 
 openai:
   # Your OpenAI API key. Can be left blank if using the OPENAI_API_KEY environment variable.

@@ -14,13 +14,19 @@ import (
 	"github.com/kekePower/museweb/pkg/utils"
 )
 
-const version = "1.1.3-dev"
+const version = "1.1.3"
 
 func main() {
 	// --- Load Configuration ---
 	cfg, err := config.Load("config.yaml")
 	if err != nil {
 		log.Printf("⚠️  Could not load config.yaml: %v. Using defaults and flags only.", err)
+	}
+
+	// Set reasoning model patterns from configuration
+	if len(cfg.Model.ReasoningModels) > 0 {
+		utils.SetReasoningModelPatterns(cfg.Model.ReasoningModels)
+		log.Printf("🧠 Loaded %d reasoning model patterns from config", len(cfg.Model.ReasoningModels))
 	}
 
 	// --- Define Command-Line Flags ---
@@ -48,7 +54,6 @@ func main() {
 	}
 	apiBase := flag.String("api-base", defaultAPIBase, "Base URL for the selected backend")
 	debug := flag.Bool("debug", cfg.Server.Debug, "Enable debug mode")
-	disableThinking := flag.Bool("disable-thinking", cfg.Model.DisableThinking, "Disable thinking tag for DeepSeek and r1-1776 models")
 	flag.Parse()
 
 	if *showVersion {
@@ -72,7 +77,7 @@ func main() {
 	}
 
 	// --- Setup HTTP Server ---
-	serverHandler := server.HandleRequest(*backend, *model, *promptsDir, *apiKey, *apiBase, *debug, !*disableThinking)
+	serverHandler := server.HandleRequest(*backend, *model, *promptsDir, *apiKey, *apiBase, *debug)
 	fs := http.FileServer(http.Dir("public"))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -89,11 +94,6 @@ func main() {
 	if *host == "0.0.0.0" {
 		displayHost = "localhost"
 	}
-	log.Printf("✨ MuseWeb v%s is live at http://%s:%s", version, displayHost, *port)
-	log.Printf("   (Using backend '%s', model '%s', and prompts from '%s')", *backend, *model, *promptsDir)
-	if !*disableThinking && utils.IsThinkingEnabledModel(*model) {
-		log.Printf("   🧠 Thinking tag enabled for %s model", *model)
-	}
 
 	listenAddr := *host
 	if listenAddr == "0.0.0.0" {
@@ -106,6 +106,12 @@ func main() {
 		ReadTimeout:  60 * time.Second,  // Time to read request
 		WriteTimeout: 300 * time.Second, // Time to write response (5 minutes for large AI responses)
 		IdleTimeout:  120 * time.Second, // Time to keep connections alive
+	}
+
+	log.Printf("✨ MuseWeb v%s is live at http://%s:%s", version, displayHost, *port)
+	log.Printf("   (Using backend '%s', model '%s', and prompts from '%s')", *backend, *model, *promptsDir)
+	if utils.IsThinkingEnabledModel(*model) {
+		log.Printf("   🧠 Thinking tag enabled for %s model", *model)
 	}
 
 	err = server.ListenAndServe()

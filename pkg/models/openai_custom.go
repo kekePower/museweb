@@ -68,14 +68,21 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 	// Using standard OpenAI API format for all models
 
 	// Create the JSON payload for the request using standard OpenAI format for all models
-	jsonData, err := json.Marshal(map[string]interface{}{
+	payload := map[string]interface{}{
 		"model": h.ModelName,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userPrompt},
 		},
 		"stream": true,
-	})
+	}
+	
+	// For reasoning models, always disable thinking to avoid reasoning output in web pages
+	if utils.IsReasoningModel(h.ModelName, utils.ReasoningModelPatterns) {
+		payload["thinking"] = false
+	}
+	
+	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("error creating JSON payload: %w", err)
 	}
@@ -105,16 +112,13 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 		httpReq.Header.Set("Authorization", "Bearer "+h.APIKey)
 	}
 
-	// Create HTTP client with proper debug transport configuration
+	// Create HTTP client with proper timeout
 	var httpClient *http.Client
 	if h.Debug {
 		// Use debug transport when debug mode is enabled
 		httpClient = &http.Client{
 			Transport: &utils.DebugTransport{
-				Transport: &customHeaderTransport{
-					base:     http.DefaultTransport,
-					thinking: !h.DisableThinking,
-				},
+				Transport: http.DefaultTransport,
 			},
 			Timeout: 5 * time.Minute,
 		}
@@ -122,18 +126,15 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 	} else {
 		// Use standard transport without debug logging
 		httpClient = &http.Client{
-			Transport: &customHeaderTransport{
-				base:     http.DefaultTransport,
-				thinking: !h.DisableThinking,
-			},
-			Timeout: 5 * time.Minute,
+			Transport: http.DefaultTransport,
+			Timeout:   5 * time.Minute,
 		}
 	}
 
 	// Send request
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
-		return fmt.Errorf("error sending request with thinking tag: %w", err)
+		return fmt.Errorf("error sending request: %w", err)
 	}
 	defer httpResp.Body.Close()
 
@@ -395,7 +396,7 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 		}
 	}
 
-	finalOutput := utils.ProcessModelOutput(responseStr, h.ModelName, !h.DisableThinking)
+	finalOutput := utils.ProcessModelOutput(responseStr, h.ModelName, false)
 	if h.Debug {
 		log.Printf("[DEBUG] Processed output length: %d bytes", len(finalOutput))
 
@@ -411,12 +412,11 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 		}
 	}
 
-	// Write the final, clean output to the client
-	_, writeErr := io.WriteString(w, finalOutput)
-	if writeErr != nil {
-		log.Printf("Client disconnected before final write.")
-		return writeErr
+	// Content has already been streamed to the client in real-time
+	// No need to write finalOutput again as it would cause duplicate content
+	if h.Debug {
+		log.Printf("[DEBUG] Streaming complete. Final output length: %d bytes", len(finalOutput))
 	}
-	flusher.Flush()
+	
 	return nil
 }

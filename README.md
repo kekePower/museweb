@@ -19,7 +19,7 @@ MuseWeb is an **experimental, prompt-driven web server** that streams HTML strai
 * **Modular Architecture** – Clean separation of concerns with dedicated packages for configuration, server, models, and utilities.
 * **Configurable via `config.yaml`** – Port, model, backend, prompt directory, and OpenAI credentials.
 * **Environment Variable Support** – Falls back to `OPENAI_API_KEY` if not specified in config or flags.
-* **Thinking Tag Support** – Special handling for models that support "thinking" tags (e.g., DeepSeek and r1-1776).
+* **Reasoning Model Support** – Automatic detection and handling of reasoning models (DeepSeek, R1, Qwen, etc.) with thinking output disabled for clean web pages.
 * **Detailed Logging** – Comprehensive logging of prompt file loading and request handling for easy debugging.
 
 ---
@@ -56,7 +56,10 @@ server:
 model:
   backend: "ollama"     # "ollama" or "openai"
   name: "llama3"        # Model name to use
-  disable_thinking: false # Disable thinking tag for supported models
+  reasoning_models:     # Patterns for reasoning models (thinking disabled automatically)
+    - "deepseek"
+    - "r1-1776"
+    - "qwen"
 openai:
   api_key: ""           # Required when backend = "openai"
   api_base: "https://api.openai.com/v1" # Change for other providers

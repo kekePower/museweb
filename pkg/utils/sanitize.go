@@ -12,6 +12,14 @@ import (
 // codeFenceRE removes markdown code fences like ```html and ```
 var codeFenceRE = regexp.MustCompile("```[a-zA-Z]*\\n?|```")
 
+// Global variable to store reasoning model patterns (can be set from main)
+var ReasoningModelPatterns []string
+
+// SetReasoningModelPatterns sets the global list of reasoning model patterns
+func SetReasoningModelPatterns(patterns []string) {
+	ReasoningModelPatterns = patterns
+}
+
 // SanitizeResponse cleans up model output by removing markdown code fences, inline backticks, and think tags with their content.
 // This function serves as the final safety net in our multi-layered approach to handling model outputs.
 func SanitizeResponse(s string) string {
@@ -138,15 +146,69 @@ func ShouldSanitize(modelName string, enableThinking bool) bool {
 
 // IsThinkingEnabledModel checks if the model is one that supports the thinking tag
 func IsThinkingEnabledModel(modelName string) bool {
+	// Use configurable patterns if available
+	if len(ReasoningModelPatterns) > 0 {
+		return IsReasoningModel(modelName, ReasoningModelPatterns)
+	}
+	
+	// Fallback to hardcoded patterns for backward compatibility
+	// Using priority-based matching: more specific patterns first
 	modelNameLower := strings.ToLower(modelName)
-	return strings.Contains(modelNameLower, "deepseek") ||
-		strings.Contains(modelNameLower, "r1-1776") ||
-		strings.Contains(modelNameLower, "qwen") ||
-		strings.Contains(modelNameLower, "qwen3") ||
-		strings.Contains(modelNameLower, "sonar-reasoning") ||
-		strings.Contains(modelNameLower, "sonar-reasoning-pro") ||
-		strings.Contains(modelNameLower, "gemini-2.5-flash-lite-preview-06-17") ||
-		strings.Contains(modelNameLower, "gemini-2.5-flash")
+	
+	// Check specific patterns first
+	if strings.Contains(modelNameLower, "deepseek-r1-distill") {
+		return true
+	}
+	if strings.Contains(modelNameLower, "r1-distill") {
+		return true
+	}
+	if strings.Contains(modelNameLower, "sonar-reasoning-pro") {
+		return true
+	}
+	if strings.Contains(modelNameLower, "sonar-reasoning") {
+		return true
+	}
+	if strings.Contains(modelNameLower, "gemini-2.5-flash-lite-preview-06-17") {
+		return true
+	}
+	if strings.Contains(modelNameLower, "gemini-2.5-flash") {
+		return true
+	}
+	if strings.Contains(modelNameLower, "r1-1776") {
+		return true
+	}
+	if strings.Contains(modelNameLower, "qwen3") {
+		return true
+	}
+	
+	// Check general patterns last
+	if strings.Contains(modelNameLower, "deepseek") {
+		return true
+	}
+	if strings.Contains(modelNameLower, "qwen") {
+		return true
+	}
+	
+	return false
+}
+
+// IsReasoningModel checks if the model supports reasoning/thinking tags based on a configurable list of patterns
+func IsReasoningModel(modelName string, reasoningPatterns []string) bool {
+	if len(reasoningPatterns) == 0 {
+		// Fallback to the hardcoded function if no patterns are provided
+		return IsThinkingEnabledModel(modelName)
+	}
+	
+	modelNameLower := strings.ToLower(modelName)
+	
+	// Use priority-based matching: check patterns in order and return on first match
+	// More specific patterns should be listed first in the configuration
+	for _, pattern := range reasoningPatterns {
+		if strings.Contains(modelNameLower, strings.ToLower(pattern)) {
+			return true
+		}
+	}
+	return false
 }
 
 // ModelResponse represents a structured response from the model with separate thinking and answer fields

@@ -53,7 +53,7 @@ func PrintRequestDebugInfo(backend, modelName, systemPrompt, userPrompt string, 
 }
 
 // HandleRequest returns a handler function that processes incoming requests
-func HandleRequest(backend, modelName, promptsDir, apiKey, apiBase string, debug bool, enableThinking bool) http.HandlerFunc {
+func HandleRequest(backend, modelName, promptsDir, apiKey, apiBase string, debug bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Set CORS headers for all responses
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -163,7 +163,7 @@ func HandleRequest(backend, modelName, promptsDir, apiKey, apiBase string, debug
 
 		// Print debug information if enabled
 		if debug {
-			PrintRequestDebugInfo(backend, modelName, systemPrompt, userPrompt, !enableThinking)
+			PrintRequestDebugInfo(backend, modelName, systemPrompt, userPrompt, false)
 		}
 
 		// Set content type for streaming response
@@ -178,7 +178,7 @@ func HandleRequest(backend, modelName, promptsDir, apiKey, apiBase string, debug
 		}
 
 		// Create model handler based on backend
-		handler := models.NewModelHandler(backend, modelName, apiKey, apiBase, debug, !enableThinking)
+		handler := models.NewModelHandler(backend, modelName, apiKey, apiBase, debug)
 
 		// Stream the response
 		err = handler.StreamResponse(w, flusher, systemPrompt, userPrompt)

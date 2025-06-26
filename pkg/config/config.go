@@ -17,8 +17,8 @@ type Config struct {
 	Model struct {
 		Backend string `yaml:"backend"`
 		Name    string `yaml:"name"`
-		// DisableThinking disables the thinking tag for DeepSeek and r1-1776 models
-		DisableThinking bool `yaml:"disable_thinking"`
+		// ReasoningModels is a list of model name patterns that support reasoning/thinking tags
+		ReasoningModels []string `yaml:"reasoning_models"`
 	} `yaml:"model"`
 	OpenAI struct {
 		APIKey  string `yaml:"api_key"`
@@ -40,6 +40,19 @@ func Load(path string) (*Config, error) {
 	cfg.Server.PromptsDir = "prompts"
 	cfg.Model.Backend = "ollama"
 	cfg.Model.Name = "llama3"
+	cfg.Model.ReasoningModels = []string{
+		// Most specific patterns first (to avoid conflicts)
+		"deepseek-r1-distill",           // DeepSeek R1 distilled models (most specific)
+		"r1-distill",                    // Other R1 distilled models
+		"sonar-reasoning-pro",           // Perplexity Sonar reasoning pro models
+		"sonar-reasoning",               // Perplexity Sonar reasoning models
+		"gemini-2.5-flash-lite-preview-06-17", // Specific Gemini model
+		"gemini-2.5-flash",              // Gemini 2.5 Flash models
+		"r1-1776",                       // OpenAI R1-1776 models
+		"qwen3",                         // Qwen3 models (specific)
+		"deepseek",                      // DeepSeek models (general, after specific)
+		"qwen",                          // Qwen models (general, after specific)
+	}
 	cfg.Ollama.APIBase = "http://localhost:11434"
 
 	// Read the config file
