@@ -262,42 +262,76 @@ func ProcessModelOutput(rawOutput string, modelName string, enableThinking bool)
 	return SanitizeResponse(cleaned, modelName, enableThinking)
 }
 
-// CleanupCodeFences removes common code fence patterns using simple string operations
+// CleanupCodeFences removes markdown code fence patterns with surgical precision
+// to avoid accidentally removing legitimate HTML content
+// Optimized with pre-checks to avoid expensive regex operations when not needed
 func CleanupCodeFences(s string) string {
-	// Don't trim whitespace at the start for streaming chunks - preserve spacing
+	// Early return if no backticks present - most common case for clean HTML
+	if !strings.Contains(s, "`") {
+		return s
+	}
+	
 	output := s
 	
-	// Use regex patterns inspired by go-strip-markdown for more robust cleaning
-	// Handle code blocks with 3 or more backticks (multiline mode)
-	codeBlockReg := regexp.MustCompile("(?m)(`{3,})" + `[a-zA-Z]*\s*\n?`)
-	output = codeBlockReg.ReplaceAllString(output, "")
-	
-	// Handle closing code fences (3 or more backticks at end of line or string)
-	closingFenceReg := regexp.MustCompile("(?m)" + `\n?\s*` + "`{3,}" + `\s*$`)
-	output = closingFenceReg.ReplaceAllString(output, "")
-	
-	// Handle inline code backticks (single backticks around content) - preserve content
-	inlineCodeReg := regexp.MustCompile("`([^`]+)`")
-	output = inlineCodeReg.ReplaceAllString(output, "$1")
-	
-	// Remove common code fence patterns at start and end (fallback)
-	output = strings.TrimPrefix(output, "```html")
-	output = strings.TrimPrefix(output, "```HTML") 
-	output = strings.TrimPrefix(output, "```")
-	
-	output = strings.TrimSuffix(output, "```")
-	
-	// Clean up any remaining triple backticks that might be embedded
+	// Step 1: Remove common code fence patterns with direct string operations (fastest)
+	// These handle the most common cases without regex
+	output = strings.ReplaceAll(output, "```html\n", "")
+	output = strings.ReplaceAll(output, "```HTML\n", "")
 	output = strings.ReplaceAll(output, "```html", "")
 	output = strings.ReplaceAll(output, "```HTML", "")
+	output = strings.ReplaceAll(output, "```\n", "")
 	output = strings.ReplaceAll(output, "```", "")
 	
-	// Remove standalone 'html' text at the very beginning (leftover from ```html removal)
-	// Use precise regex with word boundaries to avoid breaking valid HTML content
-	standaloneHtmlReg := regexp.MustCompile(`^(?i)\s*html\s*\n?`)
-	output = standaloneHtmlReg.ReplaceAllString(output, "")
-
-	// For streaming chunks, only trim excessive whitespace, not all whitespace
-	// This preserves important spacing between HTML elements
-	return strings.TrimSuffix(strings.TrimPrefix(output, "\n"), "\n")
+	// Step 2: Handle orphaned "html" at the very beginning
+	// This is the most common leftover from ```html removal
+	if strings.HasPrefix(strings.TrimSpace(output), "html") {
+		// Remove "html" only if it's at the start and followed by whitespace or newline
+		lines := strings.Split(output, "\n")
+		if len(lines) > 0 && strings.TrimSpace(lines[0]) == "html" {
+			lines = lines[1:] // Remove the first line containing only "html"
+			output = strings.Join(lines, "\n")
+		}
+	}
+	
+	// Step 3: Handle inline code backticks (preserve content, remove backticks)
+	// Only run if single backticks are present (no triple backticks should remain)
+	if strings.Contains(output, "`") {
+		// Only process single backticks, preserve the content inside
+		inlineCodeReg := regexp.MustCompile("`([^`\n]+)`")
+		output = inlineCodeReg.ReplaceAllString(output, "$1")
+	}
+	
+	// Step 4: Clean up excessive whitespace
+	// Replace multiple consecutive newlines with maximum of 2 newlines
+	if strings.Contains(output, "\n\n\n") {
+		multipleNewlinesReg := regexp.MustCompile(`\n{3,}`)
+		output = multipleNewlinesReg.ReplaceAllString(output, "\n\n")
+	}
+	
+	// Step 5: Handle trailing backticks at the very end (common in streaming)
+	// This catches cases where ``` or single ` appears at the end with potential whitespace
+	output = strings.TrimSpace(output)
+	if strings.HasSuffix(output, "```") {
+		output = strings.TrimSuffix(output, "```")
+		output = strings.TrimSpace(output) // Clean up any trailing whitespace after removal
+	} else if strings.HasSuffix(output, "`") {
+		// Handle single trailing backtick (common when ``` gets partially removed)
+		output = strings.TrimSuffix(output, "`")
+		output = strings.TrimSpace(output) // Clean up any trailing whitespace after removal
+	}
+	
+	// Step 6: Final cleanup - remove leading/trailing empty lines
+	lines := strings.Split(output, "\n")
+	
+	// Remove leading empty lines
+	for len(lines) > 0 && strings.TrimSpace(lines[0]) == "" {
+		lines = lines[1:]
+	}
+	
+	// Remove trailing empty lines
+	for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
+		lines = lines[:len(lines)-1]
+	}
+	
+	return strings.Join(lines, "\n")
 }

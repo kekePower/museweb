@@ -64,6 +64,65 @@ func extractTextFromMap(m map[string]interface{}, debug bool) string {
 	return ""
 }
 
+// Global variable to track how much content we've already sent from the buffer
+var lastSentLength int
+
+// processStreamingContent uses incremental buffer cleaning for cross-chunk pattern handling
+// while maintaining real-time streaming experience
+func processStreamingContent(newContent string, pendingBuffer *strings.Builder) string {
+	// Add new content to pending buffer
+	pendingBuffer.WriteString(newContent)
+	bufferContent := pendingBuffer.String()
+	
+	// Check if we've seen </html> - this indicates HTML content is complete
+	htmlEndPos := strings.Index(strings.ToLower(bufferContent), "</html>")
+	
+	if htmlEndPos == -1 {
+		// No </html> found yet - use incremental buffer cleaning
+		// Clean the entire buffer (handles cross-chunk patterns)
+		cleanedBuffer := utils.CleanupCodeFences(bufferContent)
+		
+		// Only send the new portion that hasn't been sent yet
+		if len(cleanedBuffer) > lastSentLength {
+			newContent := cleanedBuffer[lastSentLength:]
+			lastSentLength = len(cleanedBuffer)
+			return newContent
+		}
+		
+		// No new content to send
+		return ""
+		
+	} else {
+		// We found </html>! HTML document is complete.
+		// Remove EVERYTHING after </html> to eliminate LLM chatter
+		htmlEndTag := "</html>"
+		htmlEndFull := htmlEndPos + len(htmlEndTag)
+		
+		// Only keep content up to and including </html>
+		beforeAndIncluding := bufferContent[:htmlEndFull]
+		
+		// Clean the complete HTML content (handles all cross-chunk patterns)
+		cleanedContent := utils.CleanupCodeFences(beforeAndIncluding)
+		
+		// Calculate what new content to send (difference from what we've sent so far)
+		if len(cleanedContent) > lastSentLength {
+			newContent := cleanedContent[lastSentLength:]
+			lastSentLength = len(cleanedContent)
+			
+			// Clear the pending buffer since we're done
+			pendingBuffer.Reset()
+			lastSentLength = 0 // Reset for next request
+			
+			return newContent
+		}
+		
+		// Clear the pending buffer since we're done
+		pendingBuffer.Reset()
+		lastSentLength = 0 // Reset for next request
+		return ""
+	}
+}
+
 func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer, flusher http.Flusher, systemPrompt, userPrompt string) error {
 	// Using standard OpenAI API format for all models
 
@@ -146,6 +205,10 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 
 	// Process the streaming response
 	var fullResponse strings.Builder
+	
+	// Smart streaming buffer for pattern detection
+	var streamBuffer strings.Builder
+	var pendingBuffer strings.Builder  // Holds content that might be part of a fence
 
 	// For debugging, capture the entire raw response
 	var rawResponseCopy bytes.Buffer
@@ -287,26 +350,60 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 				}
 			}
 
-			// Add extracted content to the full response
+			// Smart streaming with pattern detection
 			if content != "" {
 				fullResponse.WriteString(content)
+				streamBuffer.WriteString(content)
 				
-				// Clean the content BEFORE streaming it to the client
-				cleanedContent := utils.CleanupCodeFences(content)
+				// Process the content for real-time streaming with fence detection
+				processedContent := processStreamingContent(content, &pendingBuffer)
 				
-				// Flush cleaned content to client for real-time updates
-				_, err := io.WriteString(w, cleanedContent)
-				if err != nil {
-					log.Printf("[ERROR] Client disconnected during streaming: %v", err)
-					return fmt.Errorf("client disconnected: %w", err)
+				// Send processed content to client immediately (real-time streaming)
+				if processedContent != "" {
+					_, err := io.WriteString(w, processedContent)
+					if err != nil {
+						log.Printf("[ERROR] Client disconnected during streaming: %v", err)
+						return fmt.Errorf("client disconnected: %w", err)
+					}
+					flusher.Flush()
 				}
-				flusher.Flush()
+				
+				if h.Debug {
+					log.Printf("[DEBUG] Streamed content chunk: %d bytes (processed: %d bytes)", len(content), len(processedContent))
+				}
 			}
 		}
 	}
 
-	// Now that the stream is complete, process the full response
+	// Now that the stream is complete, flush any remaining pending content
 	responseStr := fullResponse.String()
+	
+	// Flush any remaining content in the pending buffer
+	if pendingBuffer.Len() > 0 {
+		// Apply final cleanup to any remaining pending content
+		// At end of stream, be more aggressive about removing trailing artifacts
+		finalPending := utils.CleanupCodeFences(pendingBuffer.String())
+		
+		// Additional end-of-stream cleanup for any remaining backticks
+		finalPending = strings.TrimSpace(finalPending)
+		if strings.HasSuffix(finalPending, "```") {
+			finalPending = strings.TrimSuffix(finalPending, "```")
+			finalPending = strings.TrimSpace(finalPending)
+		}
+		
+		if finalPending != "" {
+			_, err = io.WriteString(w, finalPending)
+			if err != nil {
+				log.Printf("[ERROR] Failed to send final pending content: %v", err)
+			} else {
+				flusher.Flush()
+			}
+		}
+		
+		if h.Debug {
+			log.Printf("[DEBUG] Flushed final pending content: %d bytes", len(finalPending))
+		}
+	}
 
 	// If we got no content from the stream processing, log the raw response
 	if len(responseStr) == 0 {
@@ -387,39 +484,7 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 	}
 
 	if h.Debug {
-		log.Printf("[DEBUG] Raw model response length: %d bytes", len(responseStr))
-		// Log a preview of the raw response (first 100 chars)
-		if len(responseStr) > 0 {
-			previewLen := 100
-			if len(responseStr) < previewLen {
-				previewLen = len(responseStr)
-			}
-			log.Printf("[DEBUG] Raw response preview: %s...", responseStr[:previewLen])
-		} else {
-			log.Printf("[ERROR] Empty raw response from model %s", h.ModelName)
-		}
-	}
-
-	finalOutput := utils.ProcessModelOutput(responseStr, h.ModelName, false)
-	if h.Debug {
-		log.Printf("[DEBUG] Processed output length: %d bytes", len(finalOutput))
-
-		// Log a preview of the processed output (first 100 chars)
-		if len(finalOutput) > 0 {
-			previewLen := 100
-			if len(finalOutput) < previewLen {
-				previewLen = len(finalOutput)
-			}
-			log.Printf("[DEBUG] Processed output preview: %s...", finalOutput[:previewLen])
-		} else {
-			log.Printf("[ERROR] Empty processed output for model %s", h.ModelName)
-		}
-	}
-
-	// Content has already been streamed to the client in real-time
-	// No need to write finalOutput again as it would cause duplicate content
-	if h.Debug {
-		log.Printf("[DEBUG] Streaming complete. Final output length: %d bytes", len(finalOutput))
+		log.Printf("[DEBUG] Streaming complete. Total response length: %d bytes", len(responseStr))
 	}
 
 	return nil
