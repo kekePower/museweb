@@ -52,12 +52,29 @@ func SanitizeResponse(s string, modelName string, enableThinking bool) string {
 	cleaned = regexp.MustCompile(`(?i)(?:\s*<think>(?:\s|\n)*$)`).ReplaceAllString(cleaned, "")
 	cleaned = regexp.MustCompile(`(?i)(?:^(?:\s|\n)*</think>\s*)`).ReplaceAllString(cleaned, "")
 
-	// Remove 'html' text at the start of the response when it appears before HTML content
-	// This handles cases where the model tries to use Markdown code blocks but doesn't format them correctly
-	cleaned = regexp.MustCompile(`^(?i)\s*html\s*\n\s*`).ReplaceAllString(cleaned, ``)
-	// Make sure we're not accidentally removing the opening < character
-	if strings.HasPrefix(cleaned, "!DOCTYPE") || strings.HasPrefix(cleaned, "html") {
+	// Handle orphaned "html" text that appears alone on a line (from code fence removal)
+	// Be very specific to avoid removing legitimate HTML content
+	lines := strings.Split(cleaned, "\n")
+	if len(lines) > 0 {
+		firstLine := strings.TrimSpace(lines[0])
+		// Only remove if the first line is EXACTLY "html" and nothing else
+		if firstLine == "html" || firstLine == "HTML" {
+			// Remove the first line containing only "html"
+			lines = lines[1:]
+			cleaned = strings.Join(lines, "\n")
+		}
+	}
+	
+	// Fix common DOCTYPE issues where the opening < got removed
+	if strings.HasPrefix(strings.TrimSpace(cleaned), "!DOCTYPE") {
+		cleaned = strings.TrimSpace(cleaned)
 		cleaned = "<" + cleaned
+	} else if strings.HasPrefix(strings.TrimSpace(cleaned), "html") {
+		// Only add < if this looks like a legitimate HTML tag (contains attributes or >)
+		trimmed := strings.TrimSpace(cleaned)
+		if strings.Contains(trimmed, ">") || strings.Contains(trimmed, " ") {
+			cleaned = "<" + trimmed
+		}
 	}
 
 	// Ensure we have a complete HTML document if the content appears to be HTML
@@ -264,30 +281,78 @@ func ProcessModelOutput(rawOutput string, modelName string, enableThinking bool)
 
 // CleanupCodeFences removes markdown code fence patterns with surgical precision
 // to avoid accidentally removing legitimate HTML content
+// This function is designed to work with ANY prompt set and AI output format
 // Optimized with pre-checks to avoid expensive regex operations when not needed
 func CleanupCodeFences(s string) string {
-	// Early return if no backticks present - most common case for clean HTML
-	if !strings.Contains(s, "`") {
-		return s
-	}
-	
 	output := s
 	
+
+	
+	// Step 0: Universal HTML extraction - handle AI responses with explanatory text
+	// This ensures we extract clean HTML regardless of prompt instructions or backticks
+	if strings.Contains(output, "<!DOCTYPE") {
+		// Find the start of the HTML document
+		doctypePos := strings.Index(output, "<!DOCTYPE")
+		if doctypePos > 0 {
+			// Remove everything before DOCTYPE (explanatory text, etc.)
+			output = output[doctypePos:]
+		}
+		
+		// Find the end of the HTML document
+		htmlEndPos := strings.LastIndex(strings.ToLower(output), "</html>")
+		if htmlEndPos != -1 {
+			// Remove everything after </html>
+			htmlEndFull := htmlEndPos + len("</html>")
+			output = output[:htmlEndFull]
+		}
+	} else if strings.Contains(output, "<html") {
+		// Handle HTML without DOCTYPE
+		htmlStartPos := strings.Index(output, "<html")
+		if htmlStartPos > 0 {
+			// Remove everything before <html
+			output = output[htmlStartPos:]
+		}
+		
+		// Find the end of the HTML document
+		htmlEndPos := strings.LastIndex(strings.ToLower(output), "</html>")
+		if htmlEndPos != -1 {
+			// Remove everything after </html>
+			htmlEndFull := htmlEndPos + len("</html>")
+			output = output[:htmlEndFull]
+		}
+	}
+	
+
+	
+	// Early return if no backticks present - most common case for clean HTML
+	if !strings.Contains(output, "`") {
+		return output
+	}
+	
 	// Step 1: Remove common code fence patterns with direct string operations (fastest)
-	// These handle the most common cases without regex
+	// Enhanced to handle various AI output formats from different prompt sets
 	output = strings.ReplaceAll(output, "```html\n", "")
 	output = strings.ReplaceAll(output, "```HTML\n", "")
 	output = strings.ReplaceAll(output, "```html", "")
 	output = strings.ReplaceAll(output, "```HTML", "")
+	// Handle other common fence variations
+	output = strings.ReplaceAll(output, "```xml\n", "")
+	output = strings.ReplaceAll(output, "```xml", "")
+	output = strings.ReplaceAll(output, "```markup\n", "")
+	output = strings.ReplaceAll(output, "```markup", "")
+	// Handle generic fences
 	output = strings.ReplaceAll(output, "```\n", "")
 	output = strings.ReplaceAll(output, "```", "")
 	
 	// Step 2: Handle orphaned "html" at the very beginning
 	// This is the most common leftover from ```html removal
-	if strings.HasPrefix(strings.TrimSpace(output), "html") {
-		// Remove "html" only if it's at the start and followed by whitespace or newline
-		lines := strings.Split(output, "\n")
-		if len(lines) > 0 && strings.TrimSpace(lines[0]) == "html" {
+	// Be very precise to avoid removing legitimate HTML content
+	lines := strings.Split(output, "\n")
+	if len(lines) > 0 {
+		firstLine := strings.TrimSpace(lines[0])
+		// Only remove if the first line is EXACTLY "html" or "HTML" and nothing else
+		// This avoids removing legitimate HTML tags like "<html lang='en'>"
+		if firstLine == "html" || firstLine == "HTML" {
 			lines = lines[1:] // Remove the first line containing only "html"
 			output = strings.Join(lines, "\n")
 		}
@@ -295,9 +360,11 @@ func CleanupCodeFences(s string) string {
 	
 	// Step 3: Handle inline code backticks (preserve content, remove backticks)
 	// Only run if single backticks are present (no triple backticks should remain)
-	if strings.Contains(output, "`") {
-		// Only process single backticks, preserve the content inside
-		inlineCodeReg := regexp.MustCompile("`([^`\n]+)`")
+	// Be very conservative to avoid breaking HTML tags
+	if strings.Contains(output, "`") && !strings.Contains(output, "```") {
+		// Only process single backticks that don't contain HTML-like content
+		// Avoid matching patterns that might contain < or > characters
+		inlineCodeReg := regexp.MustCompile("`([^`\n<>]+)`")
 		output = inlineCodeReg.ReplaceAllString(output, "$1")
 	}
 	
@@ -320,18 +387,32 @@ func CleanupCodeFences(s string) string {
 		output = strings.TrimSpace(output) // Clean up any trailing whitespace after removal
 	}
 	
-	// Step 6: Final cleanup - remove leading/trailing empty lines
-	lines := strings.Split(output, "\n")
 	
-	// Remove leading empty lines
-	for len(lines) > 0 && strings.TrimSpace(lines[0]) == "" {
-		lines = lines[1:]
+	// Step 7: Final cleanup - remove leading/trailing empty lines
+	finalLines := strings.Split(output, "\n")
+	start := 0
+	for start < len(finalLines) && strings.TrimSpace(finalLines[start]) == "" {
+		start++
+	}
+	end := len(finalLines)
+	for end > start && strings.TrimSpace(finalLines[end-1]) == "" {
+		end--
+	}
+	if start < end {
+		output = strings.Join(finalLines[start:end], "\n")
+	} else {
+		output = ""
 	}
 	
-	// Remove trailing empty lines
-	for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
-		lines = lines[:len(lines)-1]
-	}
+
 	
-	return strings.Join(lines, "\n")
+	return output
+}
+
+// min returns the smaller of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
