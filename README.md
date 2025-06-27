@@ -1,8 +1,8 @@
 # MuseWeb
 
-MuseWeb is an **experimental, prompt-driven web server** that streams HTML straight from plain-text prompts using a large-language model (LLM). Originally built "just for fun," it currently serves as a proof-of-concept for what prompt-driven websites could become once local LLMs are fast and inexpensive. Even in this early state, it showcases the endless possibilities of minimal, fully self-hosted publishing.
+MuseWeb is an **experimental, prompt-driven web server** that streams HTML straight from plain-text prompts using a large-language model (LLM). **Works with any OpenAI-compatible API** - from local Ollama models to cloud providers like OpenAI, Anthropic, Google, Together.ai, Groq, and hundreds more. Originally built "just for fun," it currently serves as a proof-of-concept for what prompt-driven websites could become once local LLMs are fast and inexpensive. Even in this early state, it showcases the endless possibilities of minimal, fully self-hosted publishing.
 
-**Version 1.1.0** introduces a complete modular architecture for improved maintainability and extensibility.
+**Version 1.1.4** introduces enhanced model support, robust output sanitization, and critical streaming fixes for clean HTML generation.
 
 ---
 
@@ -10,16 +10,28 @@ MuseWeb is an **experimental, prompt-driven web server** that streams HTML strai
 
 * **Prompt → Page** – Point MuseWeb to a folder of `.txt` prompts; each prompt becomes a routable page.
 * **Live Reloading for Prompts** – Edit your prompt files and see changes instantly without restarting the server.
-* **Streaming Responses** – HTML is streamed token-by-token for instant first paint.
-* **Backend Agnostic** – Works with either:
-  * **[Ollama](https://ollama.ai/)** (default, runs everything locally), or
-  * Any **OpenAI-compatible** API (e.g. OpenAI, Together.ai, Groq, etc.).
+* **Streaming Responses** – HTML is streamed token-by-token for instant first paint with real-time sanitization.
+* **Universal API Compatibility** – Works with **any OpenAI-compatible API endpoint**:
+  * **[Ollama](https://ollama.ai/)** (default, runs everything locally)
+  * **OpenAI** (GPT-4, GPT-3.5, etc.)
+  * **Anthropic Claude** (via OpenAI-compatible proxies)
+  * **Google Gemini** (via OpenAI-compatible endpoints)
+  * **Together.ai** (hundreds of open-source models)
+  * **Groq** (ultra-fast inference)
+  * **Inception Labs Mercury** (advanced reasoning models)
+  * **Perplexity** (Sonar models with web search)
+  * **Novita.ai** (global model marketplace)
+  * **OpenRouter** (unified API for 200+ models)
+  * **Local providers** (LM Studio, vLLM, Text Generation WebUI, etc.)
+  * **Any other OpenAI-compatible endpoint** – Just change the `api_base` URL!
 * **Single Binary** – Go-powered, ~7 MB static binary, no external runtime.
 * **Zero JS by Default** – Only the streamed HTML from the model is served; you can add your own assets in `public/`.
 * **Modular Architecture** – Clean separation of concerns with dedicated packages for configuration, server, models, and utilities.
-* **Configurable via `config.yaml`** – Port, model, backend, prompt directory, and OpenAI credentials.
+* **Robust Output Sanitization** – Advanced code fence removal and markdown artifact cleaning for pristine HTML output.
+* **Enhanced Model Support** – Comprehensive support for reasoning models including DeepSeek, R1, Qwen, Mercury, and more.
+* **Configurable via `config.yaml`** – Port, model, backend, prompt directory, and API credentials.
 * **Environment Variable Support** – Falls back to `OPENAI_API_KEY` if not specified in config or flags.
-* **Reasoning Model Support** – Automatic detection and handling of reasoning models (DeepSeek, R1, Qwen, etc.) with thinking output disabled for clean web pages.
+* **Reasoning Model Support** – Automatic detection and handling of reasoning models with thinking output disabled for clean web pages.
 * **Detailed Logging** – Comprehensive logging of prompt file loading and request handling for easy debugging.
 
 ---
@@ -60,9 +72,37 @@ model:
     - "deepseek"
     - "r1-1776"
     - "qwen"
+    - "mercury"
 openai:
   api_key: ""           # Required when backend = "openai"
-  api_base: "https://api.openai.com/v1" # Change for other providers
+  api_base: "https://api.openai.com/v1" # Universal: works with ANY OpenAI-compatible API!
+
+### 🌐 Universal API Compatibility Examples:
+
+```yaml
+# OpenAI (official)
+api_base: "https://api.openai.com/v1"
+
+# Together.ai (200+ open-source models)
+api_base: "https://api.together.xyz/v1"
+
+# Groq (ultra-fast inference)
+api_base: "https://api.groq.com/openai/v1"
+
+# OpenRouter (unified API for 200+ models)
+api_base: "https://openrouter.ai/api/v1"
+
+# Perplexity (Sonar models with web search)
+api_base: "https://api.perplexity.ai"
+
+# Local LM Studio
+api_base: "http://localhost:1234/v1"
+
+# Local vLLM server
+api_base: "http://localhost:8000/v1"
+
+# Any other OpenAI-compatible endpoint
+api_base: "https://your-provider.com/v1"
 ```
 
 Configuration can be overridden with CLI flags:
@@ -70,6 +110,12 @@ Configuration can be overridden with CLI flags:
 ```bash
 # Example with command-line flags
 ./museweb -port 9000 -model mistral -backend ollama -debug
+
+# Connect to any OpenAI-compatible provider
+./museweb -backend openai -api-base "https://api.together.xyz/v1" -model "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo"
+
+# Use local LM Studio
+./museweb -backend openai -api-base "http://localhost:1234/v1" -model "llama-3.2-3b-instruct"
 
 # View all available options
 ./museweb -h
@@ -93,6 +139,30 @@ For OpenAI API keys, MuseWeb will check these sources in order:
 * The prompt files included in this repo are **examples only**—update or replace them to suit your own site.
 * HTML, Markdown, or plain prose inside the prompt will be passed verbatim to the model – **sanitize accordingly before publishing**.
 * For best results, keep design instructions in `layout.txt` and focus content instructions in individual page prompts.
+
+---
+
+## 🧹 Output Sanitization
+
+MuseWeb includes robust output sanitization to ensure clean HTML generation from AI models:
+
+### Automatic Code Fence Removal
+* **Real-time cleaning** – Code fences (````html`, `````, etc.) are removed during streaming for immediate clean output
+* **Universal application** – Works with all models including those that ignore prompt instructions about code formatting
+* **Comprehensive patterns** – Handles various code fence formats: ````html`, ````HTML`, `````, and standalone `html` text
+* **Safe processing** – Preserves valid HTML content while removing only markdown artifacts
+
+### Model-Specific Handling
+* **Mercury models** (Inception Labs) – Specialized handling for models that persistently wrap HTML in code fences
+* **Reasoning models** – Automatic detection and sanitization of thinking tags and reasoning output
+* **Streaming architecture** – Sanitization occurs before content reaches the client, not after
+
+### Advanced Features
+* **Multi-layer cleaning** – Sequential processing with regex patterns inspired by proven markdown strippers
+* **Whitespace preservation** – Maintains important spacing between HTML elements during streaming
+* **Edge case handling** – Removes standalone artifacts like orphaned `html` text without breaking valid content
+
+This ensures that regardless of which AI model you use, MuseWeb delivers clean, properly formatted HTML to your visitors.
 
 ---
 
@@ -135,7 +205,7 @@ Each example is a complete website template with:
 
 ## 🏗️ Architecture
 
-As of version 1.1.0, MuseWeb has been fully modularized with a clean separation of concerns:
+As of version 1.1.4, MuseWeb has been fully modularized with a clean separation of concerns:
 
 ```
 /

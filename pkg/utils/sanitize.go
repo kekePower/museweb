@@ -22,11 +22,9 @@ func SetReasoningModelPatterns(patterns []string) {
 
 // SanitizeResponse cleans up model output by removing markdown code fences, inline backticks, and think tags with their content.
 // This function serves as the final safety net in our multi-layered approach to handling model outputs.
-func SanitizeResponse(s string) string {
-	// First remove markdown code fences
-	cleaned := codeFenceRE.ReplaceAllString(s, "")
-	// Remove inline backticks
-	cleaned = strings.ReplaceAll(cleaned, "`", "")
+func SanitizeResponse(s string, modelName string, enableThinking bool) string {
+	// Input should already have code fences cleaned by ProcessModelOutput
+	cleaned := s
 
 	// Extract thinking content first (for logging or discarding)
 	thinking := ExtractThinking(cleaned)
@@ -88,11 +86,9 @@ func SanitizeResponse(s string) string {
   </style>
 </head>
 <body>
-  <div class="content">
-    %s
-  </div>
+%s
 </body>
-</html>`, strings.ReplaceAll(cleaned, "\n", "<br>\n"))
+</html>`, cleaned)
 		}
 	}
 
@@ -162,6 +158,12 @@ func IsThinkingEnabledModel(modelName string) bool {
 	if strings.Contains(modelNameLower, "r1-distill") {
 		return true
 	}
+	if strings.Contains(modelNameLower, "mercury-coder") {
+		return true
+	}
+	if strings.Contains(modelNameLower, "mercury") {
+		return true
+	}
 	if strings.Contains(modelNameLower, "sonar-reasoning-pro") {
 		return true
 	}
@@ -222,14 +224,20 @@ type ModelResponse struct {
 func ProcessModelOutput(rawOutput string, modelName string, enableThinking bool) string {
 	// Log the raw output length for debugging
 	log.Printf("Processing model output: %d bytes from model %s", len(rawOutput), modelName)
-	// If we shouldn't sanitize based on model/settings, return as is
+	
+	// ALWAYS clean up code fences first - this is about markdown artifacts, not thinking content
+	cleaned := CleanupCodeFences(rawOutput)
+	cleaned = codeFenceRE.ReplaceAllString(cleaned, "")
+	cleaned = strings.ReplaceAll(cleaned, "`", "")
+	
+	// If we shouldn't sanitize thinking-related content, return the code-fence-cleaned version
 	if !ShouldSanitize(modelName, enableThinking) {
-		return rawOutput
+		return cleaned
 	}
 
 	// Try to parse as JSON first (for structured outputs)
 	var resp ModelResponse
-	if err := json.Unmarshal([]byte(rawOutput), &resp); err == nil {
+	if err := json.Unmarshal([]byte(cleaned), &resp); err == nil {
 		// If we successfully parsed JSON and have both thinking and answer
 		if resp.Thinking != "" && resp.Answer != "" {
 			// If thinking is enabled, return both
@@ -243,13 +251,53 @@ func ProcessModelOutput(rawOutput string, modelName string, enableThinking bool)
 
 	// If JSON parsing failed or didn't have the expected structure,
 	// try to extract thinking tags manually and sanitize
-	thinking := ExtractThinking(rawOutput)
+	thinking := ExtractThinking(cleaned)
 	if thinking != "" && enableThinking {
 		// If thinking is enabled and we found thinking content, reconstruct with proper tags
-		sanitized := SanitizeResponse(rawOutput)
+		sanitized := SanitizeResponse(cleaned, modelName, enableThinking)
 		return fmt.Sprintf("<think>%s</think>\n%s", thinking, sanitized)
 	}
 
 	// Default case: just sanitize the output
-	return SanitizeResponse(rawOutput)
+	return SanitizeResponse(cleaned, modelName, enableThinking)
+}
+
+// CleanupCodeFences removes common code fence patterns using simple string operations
+func CleanupCodeFences(s string) string {
+	// Don't trim whitespace at the start for streaming chunks - preserve spacing
+	output := s
+	
+	// Use regex patterns inspired by go-strip-markdown for more robust cleaning
+	// Handle code blocks with 3 or more backticks (multiline mode)
+	codeBlockReg := regexp.MustCompile("(?m)(`{3,})" + `[a-zA-Z]*\s*\n?`)
+	output = codeBlockReg.ReplaceAllString(output, "")
+	
+	// Handle closing code fences (3 or more backticks at end of line or string)
+	closingFenceReg := regexp.MustCompile("(?m)" + `\n?\s*` + "`{3,}" + `\s*$`)
+	output = closingFenceReg.ReplaceAllString(output, "")
+	
+	// Handle inline code backticks (single backticks around content) - preserve content
+	inlineCodeReg := regexp.MustCompile("`([^`]+)`")
+	output = inlineCodeReg.ReplaceAllString(output, "$1")
+	
+	// Remove common code fence patterns at start and end (fallback)
+	output = strings.TrimPrefix(output, "```html")
+	output = strings.TrimPrefix(output, "```HTML") 
+	output = strings.TrimPrefix(output, "```")
+	
+	output = strings.TrimSuffix(output, "```")
+	
+	// Clean up any remaining triple backticks that might be embedded
+	output = strings.ReplaceAll(output, "```html", "")
+	output = strings.ReplaceAll(output, "```HTML", "")
+	output = strings.ReplaceAll(output, "```", "")
+	
+	// Remove standalone 'html' text at the very beginning (leftover from ```html removal)
+	// Use precise regex with word boundaries to avoid breaking valid HTML content
+	standaloneHtmlReg := regexp.MustCompile(`^(?i)\s*html\s*\n?`)
+	output = standaloneHtmlReg.ReplaceAllString(output, "")
+
+	// For streaming chunks, only trim excessive whitespace, not all whitespace
+	// This preserves important spacing between HTML elements
+	return strings.TrimSuffix(strings.TrimPrefix(output, "\n"), "\n")
 }

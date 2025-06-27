@@ -290,8 +290,12 @@ func (h *OpenAIHandler) handleWithCustomRequest(ctx context.Context, w io.Writer
 			// Add extracted content to the full response
 			if content != "" {
 				fullResponse.WriteString(content)
-				// Flush partial content to client for real-time updates
-				_, err := io.WriteString(w, content)
+				
+				// Clean the content BEFORE streaming it to the client
+				cleanedContent := utils.CleanupCodeFences(content)
+				
+				// Flush cleaned content to client for real-time updates
+				_, err := io.WriteString(w, cleanedContent)
 				if err != nil {
 					log.Printf("[ERROR] Client disconnected during streaming: %v", err)
 					return fmt.Errorf("client disconnected: %w", err)

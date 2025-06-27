@@ -16,6 +16,8 @@ model:
   # These patterns are checked in order (first match wins)
   reasoning_models:
     - "deepseek-r1-distill"  # DeepSeek R1 distilled models (most specific first)
+    - "mercury-coder"        # Inception Labs Mercury Coder models
+    - "mercury"              # Inception Labs Mercury models
     - "sonar-reasoning-pro"  # Perplexity Sonar reasoning pro models
     - "sonar-reasoning"      # Perplexity Sonar reasoning models
     - "gemini-2.5-flash-lite-preview-06-17"  # Specific Gemini model
