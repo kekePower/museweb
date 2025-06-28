@@ -27,6 +27,7 @@ MuseWeb is an **experimental, prompt-driven web server** that streams HTML strai
 * **Single Binary** – Go-powered, ~7 MB static binary, no external runtime.
 * **Zero JS by Default** – Only the streamed HTML from the model is served; you can add your own assets in `public/`.
 * **Modular Architecture** – Clean separation of concerns with dedicated packages for configuration, server, models, and utilities.
+* **Prompt-Scoped Static Assets** – Each prompt set can have its own `public/` directory for static files (CSS, images, JS, etc.), with automatic resolution and fallback to the global `public/` directory.
 * **Robust Output Sanitization** – Advanced code fence removal and markdown artifact cleaning for pristine HTML output.
 * **Enhanced Model Support** – Comprehensive support for reasoning models including DeepSeek, R1, Qwen, Mercury, and more.
 * **Configurable via `config.yaml`** – Port, model, backend, prompt directory, and API credentials.
@@ -185,21 +186,31 @@ Each example is a complete website template with:
 - Page prompts (e.g., `home.txt`, `about.txt`) – Individual page content
 - `public/` directory – CSS files and assets specific to that theme
 
+**Prompt-Scoped Static Assets**
+
+As of v1.2.0, each prompt set can have its own `public/` directory for static files (CSS, images, JS, etc.). When a static file is requested:
+
+1. MuseWeb first checks for the file in the active prompt set's `public/` directory (e.g. `prompts/corporate/public/logo.png`).
+2. If not found, it falls back to the global `public/` directory (e.g. `public/logo.png`).
+3. If still not found, a custom 404 error page is shown.
+
 **To use an example:**
 
 1. Copy the example's prompt files to your main `prompts/` directory:
    ```bash
-   cp examples/minimalist/*.txt prompts/
+   cp -r examples/minimalist prompts/minimalist
    ```
 
-2. Copy the example's assets to your main `public/` directory:
+2. Run MuseWeb with that prompt set:
    ```bash
-   cp -r examples/minimalist/public/* public/
+   ./museweb -prompts prompts/minimalist
    ```
 
-3. Restart MuseWeb to see the new theme in action
+3. Place any custom assets for that prompt set in `prompts/minimalist/public/`. Place global assets in `public/`.
 
-**Note:** Make sure to copy the contents of the example's `public/` directory to the main `public/` directory so that CSS files and images are properly served.
+4. When requesting `/logo.png`, MuseWeb will serve `prompts/minimalist/public/logo.png` if it exists, otherwise fall back to `public/logo.png`.
+
+**No need to copy assets from example public/ to global public/ anymore!**
 
 ---
 
@@ -211,8 +222,9 @@ As of version 1.1.4, MuseWeb has been fully modularized with a clean separation 
 /
 ├── main.go           # Application entry point and orchestration
 ├── config.yaml       # Configuration file
-├── public/           # Static files served directly
+├── public/           # Global static files (fallback for all prompts)
 ├── prompts/          # Prompt text files
+│   └── [prompt-set]/public/  # Prompt-scoped static files (served for that prompt set only)
 └── pkg/              # Go packages
     ├── config/       # Configuration loading and validation
     ├── models/       # AI model backends (Ollama and OpenAI)

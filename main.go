@@ -6,10 +6,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/kekePower/museweb/pkg/config"
+	"github.com/kekePower/museweb/pkg/errors"
+	"github.com/kekePower/museweb/pkg/middleware"
 	"github.com/kekePower/museweb/pkg/server"
 	"github.com/kekePower/museweb/pkg/utils"
 )
@@ -78,17 +81,35 @@ func main() {
 
 	// --- Setup HTTP Server ---
 	serverHandler := server.HandleRequest(*backend, *model, *promptsDir, *apiKey, *apiBase, *debug)
-	fs := http.FileServer(http.Dir("public"))
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// Main route handler with recovery middleware
+	mainHandler := middleware.WrapHandler(func(w http.ResponseWriter, r *http.Request) {
 		// Serve static files if the path contains a dot (file extension)
 		if strings.Contains(r.URL.Path, ".") {
-			fs.ServeHTTP(w, r)
+			// Determine static file paths
+			staticReqPath := strings.TrimPrefix(r.URL.Path, "/") // e.g. "logo.png" or "static/logo.png"
+			promptScopedPath := filepath.Join(*promptsDir, "public", staticReqPath)
+			globalPath := filepath.Join("public", staticReqPath)
+
+			// Try prompt-scoped public directory first
+			if _, err := os.Stat(promptScopedPath); err == nil {
+				http.ServeFile(w, r, promptScopedPath)
+				return
+			}
+			// Fall back to global public directory
+			if _, err := os.Stat(globalPath); err == nil {
+				http.ServeFile(w, r, globalPath)
+				return
+			}
+			// Not found in either location
+			errors.RenderErrorPage(w, r, http.StatusNotFound, fmt.Sprintf("Static file '%s' not found in prompt-scoped or global public directories", r.URL.Path))
 			return
 		}
 		// Otherwise, handle as a prompt request
 		serverHandler.ServeHTTP(w, r)
 	})
+
+	http.HandleFunc("/", mainHandler)
 
 	displayHost := *host
 	if *host == "0.0.0.0" {
@@ -98,6 +119,27 @@ func main() {
 	listenAddr := *host
 	if listenAddr == "0.0.0.0" {
 		listenAddr = ""
+	}
+
+	// Add a test route for error handling (can be removed in production)
+	if *debug {
+		http.HandleFunc("/error-test", middleware.WrapHandler(func(w http.ResponseWriter, r *http.Request) {
+			// Test different error types based on query parameter
+			errorType := r.URL.Query().Get("type")
+			switch errorType {
+			case "panic":
+				panic("Test panic for error handling")
+			case "404":
+				errors.NotFound(w, r)
+			case "500":
+				errors.InternalServerError(w, r, "Test internal server error")
+			case "405":
+				errors.MethodNotAllowed(w, r)
+			default:
+				errors.BadRequest(w, r, "Invalid error type. Use: panic, 404, 500, or 405")
+			}
+		}))
+		log.Printf("📝 Debug mode: Error testing available at /error-test?type=[panic|404|500|405]")
 	}
 
 	// Create a custom HTTP server with longer timeouts for AI responses
