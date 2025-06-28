@@ -1,14 +1,14 @@
 # Streaming Sanitization: A Technical Deep Dive
 
-**How to Handle Cross-Chunk Markdown Patterns in Real-Time Streaming Applications**
+**Smart Streaming Approach for Clean AI Output in Real-Time Applications**
 
 ---
 
 ## 📋 **Table of Contents**
 
 1. [The Problem](#the-problem)
-2. [Understanding Cross-Chunk Patterns](#understanding-cross-chunk-patterns)
-3. [Solution Architecture](#solution-architecture)
+2. [Evolution of Solutions](#evolution-of-solutions)
+3. [Smart Streaming Architecture](#smart-streaming-architecture)
 4. [Implementation Details](#implementation-details)
 5. [Code Examples](#code-examples)
 6. [Performance Considerations](#performance-considerations)
@@ -19,87 +19,141 @@
 
 ## 🚨 **The Problem**
 
-When building streaming applications that process AI model outputs, you often encounter **markdown artifacts** that need to be removed in real-time. The challenge becomes exponentially harder when these patterns can be **split across multiple streaming chunks**.
+When building streaming applications that process AI model outputs, you encounter **markdown artifacts and explanatory text** that need to be removed while maintaining real-time streaming performance. The core challenge is that AI models often generate verbose responses with unwanted content before and after the actual HTML.
 
 ### **Real-World Scenario**
 ```
-AI Model Output: ```html\n<!DOCTYPE html><html>...</html>\n```\nHere's your page...
+AI Model Output: 
+I'll create a beautiful page for you.
 
-Streaming Chunks:
-- Chunk 1: "```html\n<!DOCTYPE html>"
-- Chunk 2: "<html><body>...</body>"  
-- Chunk 3: "</html>\n```\nHere's your page..."
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>...</head>
+<body>...</body>
+</html>
+
+Hope you like it! Let me know if you need changes.
 ```
 
 ### **The Challenge**
-- **Individual chunk cleaning** misses cross-chunk patterns
-- **Buffering everything** kills real-time streaming performance
-- **Pattern detection** becomes complex with partial matches
-- **User experience** suffers from delayed or artifact-filled output
+- **Orphaned artifacts** like standalone "html" text before DOCTYPE
+- **Explanatory text** before and after the actual HTML content
+- **Cross-chunk patterns** where artifacts span multiple streaming chunks
+- **Real-time requirements** - users expect immediate streaming feedback
+- **Clean output** - no markdown fences, explanations, or trailing chatter
 
 ---
 
-## 🧩 **Understanding Cross-Chunk Patterns**
+## 🔄 **Evolution of Solutions**
 
-### **Pattern Types We Encountered**
+### **Approach 1: Individual Chunk Cleaning (Failed)**
 
-#### 1. **Opening Fences Split Across Chunks**
+**Strategy**: Clean each streaming chunk independently as it arrives.
+
 ```go
-// Chunk 1: "```html\n<!DOCTYPE"
-// Chunk 2: " html><html>..."
-// Result: Opening fence spans chunks 1-2
+// PROBLEMATIC APPROACH
+func handleChunk(chunk string) string {
+    return utils.CleanupCodeFences(chunk)  // ❌ Misses cross-chunk patterns
+}
 ```
 
-#### 2. **Closing Fences Split Across Chunks**
+**Problems Discovered**:
+- Orphaned "html" text when `html\n<!DOCTYPE` spans chunks
+- Missing `<` in DOCTYPE when cleaning changes buffer structure
+- Incomplete pattern detection across chunk boundaries
+
+### **Approach 2: Incremental Buffer Cleaning (Partially Successful)**
+
+**Strategy**: Buffer all content, clean entire buffer, track sent positions.
+
 ```go
-// Chunk 1: "...</html>\n"
-// Chunk 2: "```\nHere's your page"
-// Result: Closing fence spans chunks 1-2
+// COMPLEX APPROACH
+func processStreamingContent(newContent string, buffer *strings.Builder) string {
+    buffer.WriteString(newContent)
+    cleanedBuffer := utils.CleanupCodeFences(buffer.String())  // Clean entire buffer
+    
+    // Send only new cleaned content
+    if len(cleanedBuffer) > lastSentLength {
+        newContent := cleanedBuffer[lastSentLength:]  // ⚠️ Position tracking issues
+        lastSentLength = len(cleanedBuffer)
+        return newContent
+    }
+    return ""
+}
 ```
 
-#### 3. **Complete Patterns Across Multiple Chunks**
+**Problems Discovered**:
+- Position tracking mismatches when cleaning changes buffer structure
+- Still had orphaned "html" text due to incremental cleaning
+- Complex state management with global variables
+
+### **Approach 3: Smart Streaming (Current Solution)**
+
+**Strategy**: Buffer until HTML start, stream HTML content, discard everything after HTML end.
+
 ```go
-// Chunk 1: "```html\n"
-// Chunk 2: "<!DOCTYPE html>..."
-// Chunk 3: "</html>\n```"
-// Result: Entire fence pattern spans chunks 1-3
+// ELEGANT SOLUTION
+func processOllamaStreamingContent(newContent string, pendingBuffer *strings.Builder) string {
+    pendingBuffer.WriteString(newContent)
+    bufferContent := pendingBuffer.String()
+    
+    // Phase 1: Buffer until HTML start
+    if !streamingStarted {
+        if htmlStartPos := findHTMLStart(bufferContent); htmlStartPos != -1 {
+            streamingStarted = true
+            return bufferContent[htmlStartPos:]  // ✅ Start streaming from HTML
+        }
+        return ""  // Keep buffering
+    }
+    
+    // Phase 2: Stream HTML content
+    if htmlEndPos := findHTMLEnd(bufferContent); htmlEndPos == -1 {
+        return getNewContent()  // Continue streaming
+    }
+    
+    // Phase 3: Send final HTML and discard everything after
+    return getFinalHTML()  // ✅ Clean cutoff
+}
 ```
 
-#### 4. **Orphaned Artifacts**
-```go
-// Chunk 1: "html\n<!DOCTYPE html>" (orphaned "html" from ```html removal)
-// Chunk 2: "...</html>`" (single backtick from ``` partial removal)
-```
+**Key Insights**:
+- **HTML boundary detection** is more reliable than pattern cleaning
+- **Three-phase approach** handles all edge cases elegantly
+- **No position tracking complexity** - simple state machine
 
 ---
 
-## 🏗️ **Solution Architecture**
+## 🏠 **Smart Streaming Architecture**
 
-Our solution uses **Incremental Buffer Streaming** with the following components:
+Our solution uses **Three-Phase Smart Streaming** with the following components:
 
 ### **Core Components**
-1. **Accumulation Buffer** - Collects all content for complete pattern detection
-2. **Content Tracker** - Tracks what content has already been sent to client
-3. **Incremental Cleaner** - Cleans entire buffer but sends only new content
-4. **Context-Aware Truncation** - Uses HTML structure to determine completion
+1. **Buffer Phase** - Accumulates content until HTML start is detected
+2. **Stream Phase** - Real-time streaming of HTML content to client
+3. **Cutoff Phase** - Stops streaming at HTML end, discards everything after
+4. **Boundary Detection** - Uses HTML structure markers for phase transitions
 
 ### **Architecture Diagram**
 ```
 ┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   AI Model  │───▶│  Streaming       │───▶│   Client        │
-│   Chunks    │    │  Sanitization    │    │   (Browser)     │
+│   AI Model  │───▶│  Smart Streaming │───▶│   Client        │
+│   Chunks    │    │  Pipeline        │    │   (Browser)     │
 └─────────────┘    │                  │    └─────────────────┘
                    │ ┌──────────────┐ │
-                   │ │ Accumulation │ │
-                   │ │ Buffer       │ │
+                   │ │ Phase 1:     │ │
+                   │ │ Buffer Until │ │
+                   │ │ HTML Start   │ │
                    │ └──────────────┘ │
                    │ ┌──────────────┐ │
+                   │ │ Phase 2:     │ │
+                   │ │ Stream HTML  │ │
                    │ │ Content      │ │
-                   │ │ Tracker      │ │
                    │ └──────────────┘ │
                    │ ┌──────────────┐ │
-                   │ │ Incremental  │ │
-                   │ │ Cleaner      │ │
+                   │ │ Phase 3:     │ │
+                   │ │ Cutoff After │ │
+                   │ │ HTML End     │ │
                    │ └──────────────┘ │
                    └──────────────────┘
 ```

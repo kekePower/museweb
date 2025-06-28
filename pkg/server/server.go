@@ -73,9 +73,23 @@ func HandleRequest(backend, modelName, promptsDir, apiKey, apiBase string, debug
 		}
 
 		// Parse the URL path to get the prompt file name
-		promptFile := strings.TrimPrefix(r.URL.Path, "/")
+		originalPath := r.URL.Path
+		promptFile := strings.TrimPrefix(originalPath, "/")
+		// Remove trailing slash if present (AI sometimes generates URLs like /path/?lang=xx)
+		promptFile = strings.TrimSuffix(promptFile, "/")
 		if promptFile == "" {
 			promptFile = "home"
+		}
+		
+		// Debug logging for URL path cleaning
+		if debug && strings.HasSuffix(originalPath, "/") && originalPath != "/" {
+			log.Printf("🔧 Cleaned URL path: '%s' -> '%s'", originalPath, promptFile)
+		}
+
+		// Extract language parameter from URL query string
+		langParam := r.URL.Query().Get("lang")
+		if debug && langParam != "" {
+			log.Printf("🌐 Language parameter detected: %s", langParam)
 		}
 
 		// Add .txt extension if not present
@@ -158,6 +172,21 @@ func HandleRequest(backend, modelName, promptsDir, apiKey, apiBase string, debug
 			userInput := string(body)
 			if userInput != "" {
 				userPrompt += "\n\nUser Input: " + userInput
+			}
+		}
+
+		// Add translation instruction if language parameter is provided
+		if langParam != "" {
+			// Validate and clean the language parameter (basic sanitization)
+			langParam = strings.TrimSpace(langParam)
+			if len(langParam) > 0 && len(langParam) <= 10 { // Reasonable length limit
+				translationInstruction := fmt.Sprintf("\n\nTranslate all the content to %s.\n**VERY IMPORTANT:** DO NOT TRANSLATE ANY OF THE URLS IN THE NAVBAR. Keep the links as they are.\n**VERY IMPORTANT:** Add ?lang=%s to all generated URLs to preserve the language context.", langParam, langParam)
+				userPrompt += translationInstruction
+				if debug {
+					log.Printf("🌐 Added translation instruction: %s", translationInstruction)
+				}
+			} else if debug {
+				log.Printf("⚠️  Invalid language parameter ignored: %s", langParam)
 			}
 		}
 
